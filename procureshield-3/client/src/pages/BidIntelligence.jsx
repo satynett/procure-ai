@@ -22,7 +22,7 @@ function encodeFile(file) {
 function Status({ value }) {
   const cls = value === "pass" ? "bg-emerald-50 text-emerald-700"
     : value === "missing" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
-  return <span className={\`rounded-full px-2 py-1 text-xs font-semibold \${cls}\`}>{value}</span>;
+  return <span className={"rounded-full px-2 py-1 text-xs font-semibold " + cls}>{value}</span>;
 }
 
 export default function BidIntelligence() {
@@ -109,7 +109,7 @@ export default function BidIntelligence() {
             </div>
           ))}
           {(requirements.required_documents || []).map((d, i) => (
-            <div key={\`d-\${i}\`} className="rounded-lg border border-slate-200 p-3 text-sm">📄 {d}</div>
+            <div key={"d-" + i} className="rounded-lg border border-slate-200 p-3 text-sm">📄 {d}</div>
           ))}
         </div>
         <p className="mt-4 text-xs text-amber-700">Prototype parser only. No LLM or government verification is claimed.</p>
