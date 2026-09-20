@@ -235,3 +235,10 @@ export async function status() {
     return { reachable: false, url: ENGINE_URL, message: err.message, cached_analysis_at: cache?.at || null };
   }
 }
+
+export async function intelligencePdf(payload) {
+  return engineFetch("/intelligence/pdf", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

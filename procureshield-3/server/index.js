@@ -23,6 +23,7 @@ import {
   companyDetail,
   egoNetwork,
   engineUrl,
+  intelligencePdf,
   invalidateCache,
   status as engineStatus,
   tenderDetail,
@@ -645,6 +646,10 @@ app.get("/api/audit-log", (req, res) => {
 // explanations, and this route selects the right one. Every sentence the UI
 // shows is therefore traceable to a computed signal.
 // ---------------------------------------------------------------------
+app.post("/api/intelligence/pdf", asyncRoute(async (req, res) => {
+  res.json(await intelligencePdf(req.body));
+}));
+
 app.post("/api/ai/analyze", asyncRoute(async (req, res) => {
   const { mode, payload } = req.body || {};
   const view = await getAnalysis();
