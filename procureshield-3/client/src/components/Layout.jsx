@@ -12,10 +12,12 @@ import {
   ChevronDown,
   LogOut,
   FlaskConical,
+  FileSearch,
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 
 const NAV = [
+  { to: "/app/bid-intelligence", label: "Bid Intelligence", icon: FileSearch },
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/bid-verification", label: "Bid Verification", icon: ShieldCheck },
   { to: "/app/bidder-network", label: "Bidder Network", icon: Share2 },
