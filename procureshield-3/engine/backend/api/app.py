@@ -20,6 +20,7 @@ from ..exceptions import (
     ProcureShieldError,
 )
 from ..logging_utils import configure_logging, get_logger
+from ..intelligence import check_eligibility, decode_upload, extract_pdf, extract_requirements, validate_document
 from .dependencies import get_pipeline, get_settings
 from .schemas import (
     AnalyzeRequest,
@@ -224,6 +225,35 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     ) -> Dict[str, Any]:
         """Entities from the latest analysis at or above the alert threshold."""
         return pipeline.alerts(min_score=min_score, limit=limit, entity_type=entity_type)
+
+    @app.post("/intelligence/pdf", tags=["document-intelligence"])
+    def intelligence_pdf(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        """Extract text from an uploaded PDF supplied as base64."""
+        try:
+            data = decode_upload(payload)
+            result = extract_pdf(data, str(payload.get("filename", "document.pdf")))
+            result["requirements"] = extract_requirements(result.get("text", ""))
+            return result
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/intelligence/requirements", tags=["document-intelligence"])
+    def intelligence_requirements(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        return extract_requirements(str(payload.get("text", "")))
+
+    @app.post("/intelligence/validate-document", tags=["document-intelligence"])
+    def intelligence_validate(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        try:
+            data = decode_upload(payload)
+            return validate_document(str(payload.get("filename", "document.pdf")), payload.get("content_type"), data)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/intelligence/eligibility", tags=["document-intelligence"])
+    def intelligence_eligibility(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        tender = payload.get("tender") or {}
+        bidder = payload.get("bidder") or {}
+        return check_eligibility(tender, bidder)
 
     @app.get("/demo/dataset", tags=["system"])
     def demo_dataset(
