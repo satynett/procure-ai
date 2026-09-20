@@ -1,0 +1,36 @@
+# Two services: the Python analytics engine and the Node BFF that serves the
+# React client. The client is built into the BFF image at build time.
+#
+#   docker compose up --build
+#   open http://localhost:4000
+services:
+  engine:
+    build:
+      context: ./engine
+    environment:
+      PROCURESHIELD_GRAPH_BACKEND: memory
+      PROCURESHIELD_LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    environment:
+      PORT: 4000
+      # Container-to-container: the compose service name, not localhost.
+      ENGINE_URL: http://engine:8000
+      DEMO_USERNAME: admin
+      DEMO_PASSWORD: admin123
+    ports:
+      - "4000:4000"
+    depends_on:
+      engine:
+        condition: service_healthy

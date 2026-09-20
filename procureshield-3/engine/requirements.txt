@@ -1,0 +1,27 @@
+# ProcureShield Engine - runtime + test dependencies (Python 3.11+)
+# Versions are lower-bounded so the stack installs on a clean 3.11 image;
+# pin exactly (==) if you need byte-identical reproducibility.
+
+# --- core numerics / data -------------------------------------------------
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.3
+joblib>=1.3
+
+# --- graph ----------------------------------------------------------------
+networkx>=3.2
+
+# --- deep learning --------------------------------------------------------
+# CPU wheels from PyPI are sufficient. For CUDA builds see
+# https://pytorch.org/get-started/locally/
+torch>=2.2
+torch-geometric>=2.5
+
+# --- API ------------------------------------------------------------------
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+
+# --- tests ----------------------------------------------------------------
+pytest>=8.0
+httpx>=0.27

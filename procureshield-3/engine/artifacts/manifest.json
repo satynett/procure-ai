@@ -1,0 +1,54 @@
+{
+  "mode": "supervised_gat",
+  "created_at": "2026-09-20T12:06:38+00:00",
+  "in_channels": 32,
+  "decision_threshold": 0.5,
+  "metrics": {
+    "train": {
+      "split": "train",
+      "n": 8,
+      "positives": 2,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "roc_auc": 1.0,
+      "average_precision": 1.0,
+      "true_negatives": 6,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "true_positives": 2,
+      "threshold": 0.5
+    },
+    "validation": {
+      "split": "validation",
+      "n": 2,
+      "positives": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "roc_auc": 1.0,
+      "average_precision": 1.0,
+      "true_negatives": 1,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "true_positives": 1,
+      "threshold": 0.5
+    },
+    "test": {
+      "split": "test",
+      "n": 4,
+      "positives": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "roc_auc": 1.0,
+      "average_precision": 1.0,
+      "true_negatives": 3,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "true_positives": 1,
+      "threshold": 0.5
+    }
+  },
+  "seed": 42
+}

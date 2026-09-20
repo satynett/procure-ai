@@ -1,0 +1,1469 @@
+[
+  {
+    "bid_id": "GEM/2026/B/001001",
+    "tender_id": "GEM/2026/T/002001",
+    "bidder_id": "BID-1004",
+    "category": "Electrical Goods",
+    "bid_amount": 1428406,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001002",
+    "tender_id": "GEM/2026/T/002001",
+    "bidder_id": "BID-1005",
+    "category": "Electrical Goods",
+    "bid_amount": 1466152,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001003",
+    "tender_id": "GEM/2026/T/002001",
+    "bidder_id": "BID-1002",
+    "category": "Electrical Goods",
+    "bid_amount": 1526865,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001004",
+    "tender_id": "GEM/2026/T/002001",
+    "bidder_id": "BID-1003",
+    "category": "Electrical Goods",
+    "bid_amount": 1534155,
+    "submission_date": "2026-06-02",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001005",
+    "tender_id": "GEM/2026/T/002001",
+    "bidder_id": "BID-1018",
+    "category": "Electrical Goods",
+    "bid_amount": 1495715,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001006",
+    "tender_id": "GEM/2026/T/002002",
+    "bidder_id": "BID-1002",
+    "category": "Electrical Goods",
+    "bid_amount": 3430772,
+    "submission_date": "2026-06-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001007",
+    "tender_id": "GEM/2026/T/002002",
+    "bidder_id": "BID-1001",
+    "category": "Electrical Goods",
+    "bid_amount": 3348075,
+    "submission_date": "2026-06-10",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001008",
+    "tender_id": "GEM/2026/T/002002",
+    "bidder_id": "BID-1004",
+    "category": "Electrical Goods",
+    "bid_amount": 3523315,
+    "submission_date": "2026-06-10",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001009",
+    "tender_id": "GEM/2026/T/002002",
+    "bidder_id": "BID-1003",
+    "category": "Electrical Goods",
+    "bid_amount": 3441354,
+    "submission_date": "2026-06-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001010",
+    "tender_id": "GEM/2026/T/002003",
+    "bidder_id": "BID-1003",
+    "category": "Security Services",
+    "bid_amount": 2860790,
+    "submission_date": "2026-06-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001011",
+    "tender_id": "GEM/2026/T/002003",
+    "bidder_id": "BID-1004",
+    "category": "Security Services",
+    "bid_amount": 2837337,
+    "submission_date": "2026-06-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001012",
+    "tender_id": "GEM/2026/T/002003",
+    "bidder_id": "BID-1002",
+    "category": "Security Services",
+    "bid_amount": 2683279,
+    "submission_date": "2026-06-17",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001013",
+    "tender_id": "GEM/2026/T/002003",
+    "bidder_id": "BID-1001",
+    "category": "Security Services",
+    "bid_amount": 2792364,
+    "submission_date": "2026-06-17",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001014",
+    "tender_id": "GEM/2026/T/002003",
+    "bidder_id": "BID-1005",
+    "category": "Security Services",
+    "bid_amount": 2797420,
+    "submission_date": "2026-06-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001015",
+    "tender_id": "GEM/2026/T/002003",
+    "bidder_id": "BID-1018",
+    "category": "Security Services",
+    "bid_amount": 2779949,
+    "submission_date": "2026-06-17",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001016",
+    "tender_id": "GEM/2026/T/002004",
+    "bidder_id": "BID-1004",
+    "category": "Medical Equipment",
+    "bid_amount": 711118,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001017",
+    "tender_id": "GEM/2026/T/002004",
+    "bidder_id": "BID-1002",
+    "category": "Medical Equipment",
+    "bid_amount": 693705,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001018",
+    "tender_id": "GEM/2026/T/002004",
+    "bidder_id": "BID-1001",
+    "category": "Medical Equipment",
+    "bid_amount": 675639,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001019",
+    "tender_id": "GEM/2026/T/002004",
+    "bidder_id": "BID-1005",
+    "category": "Medical Equipment",
+    "bid_amount": 658936,
+    "submission_date": "2026-06-22",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001020",
+    "tender_id": "GEM/2026/T/002004",
+    "bidder_id": "BID-1013",
+    "category": "Medical Equipment",
+    "bid_amount": 711386,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001021",
+    "tender_id": "GEM/2026/T/002005",
+    "bidder_id": "BID-1005",
+    "category": "Medical Equipment",
+    "bid_amount": 3388083,
+    "submission_date": "2026-06-30",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001022",
+    "tender_id": "GEM/2026/T/002005",
+    "bidder_id": "BID-1001",
+    "category": "Medical Equipment",
+    "bid_amount": 3492043,
+    "submission_date": "2026-06-30",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001023",
+    "tender_id": "GEM/2026/T/002005",
+    "bidder_id": "BID-1004",
+    "category": "Medical Equipment",
+    "bid_amount": 3620664,
+    "submission_date": "2026-06-30",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001024",
+    "tender_id": "GEM/2026/T/002005",
+    "bidder_id": "BID-1006",
+    "category": "Medical Equipment",
+    "bid_amount": 3619712,
+    "submission_date": "2026-06-30",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001025",
+    "tender_id": "GEM/2026/T/002005",
+    "bidder_id": "BID-1015",
+    "category": "Medical Equipment",
+    "bid_amount": 3475657,
+    "submission_date": "2026-06-30",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001026",
+    "tender_id": "GEM/2026/T/002006",
+    "bidder_id": "BID-1001",
+    "category": "Electrical Goods",
+    "bid_amount": 4511740,
+    "submission_date": "2026-07-06",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001027",
+    "tender_id": "GEM/2026/T/002006",
+    "bidder_id": "BID-1005",
+    "category": "Electrical Goods",
+    "bid_amount": 4334396,
+    "submission_date": "2026-07-06",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001028",
+    "tender_id": "GEM/2026/T/002006",
+    "bidder_id": "BID-1003",
+    "category": "Electrical Goods",
+    "bid_amount": 4620898,
+    "submission_date": "2026-07-06",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001029",
+    "tender_id": "GEM/2026/T/002006",
+    "bidder_id": "BID-1002",
+    "category": "Electrical Goods",
+    "bid_amount": 4490091,
+    "submission_date": "2026-07-06",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001030",
+    "tender_id": "GEM/2026/T/002007",
+    "bidder_id": "BID-1006",
+    "category": "Medical Equipment",
+    "bid_amount": 4111396,
+    "submission_date": "2026-07-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001031",
+    "tender_id": "GEM/2026/T/002007",
+    "bidder_id": "BID-1003",
+    "category": "Medical Equipment",
+    "bid_amount": 3862067,
+    "submission_date": "2026-07-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001032",
+    "tender_id": "GEM/2026/T/002007",
+    "bidder_id": "BID-1002",
+    "category": "Medical Equipment",
+    "bid_amount": 4068493,
+    "submission_date": "2026-07-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001033",
+    "tender_id": "GEM/2026/T/002007",
+    "bidder_id": "BID-1005",
+    "category": "Medical Equipment",
+    "bid_amount": 4130891,
+    "submission_date": "2026-07-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001034",
+    "tender_id": "GEM/2026/T/002007",
+    "bidder_id": "BID-1001",
+    "category": "Medical Equipment",
+    "bid_amount": 4062406,
+    "submission_date": "2026-07-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001035",
+    "tender_id": "GEM/2026/T/002008",
+    "bidder_id": "BID-1003",
+    "category": "IT Hardware",
+    "bid_amount": 2270724,
+    "submission_date": "2026-07-21",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001036",
+    "tender_id": "GEM/2026/T/002008",
+    "bidder_id": "BID-1002",
+    "category": "IT Hardware",
+    "bid_amount": 2363042,
+    "submission_date": "2026-07-21",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001037",
+    "tender_id": "GEM/2026/T/002008",
+    "bidder_id": "BID-1004",
+    "category": "IT Hardware",
+    "bid_amount": 2321286,
+    "submission_date": "2026-07-21",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001038",
+    "tender_id": "GEM/2026/T/002008",
+    "bidder_id": "BID-1005",
+    "category": "IT Hardware",
+    "bid_amount": 2224956,
+    "submission_date": "2026-07-21",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001039",
+    "tender_id": "GEM/2026/T/002009",
+    "bidder_id": "BID-1006",
+    "category": "Medical Equipment",
+    "bid_amount": 4142254,
+    "submission_date": "2026-07-29",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001040",
+    "tender_id": "GEM/2026/T/002009",
+    "bidder_id": "BID-1001",
+    "category": "Medical Equipment",
+    "bid_amount": 4229528,
+    "submission_date": "2026-07-29",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001041",
+    "tender_id": "GEM/2026/T/002009",
+    "bidder_id": "BID-1003",
+    "category": "Medical Equipment",
+    "bid_amount": 4343885,
+    "submission_date": "2026-07-29",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001042",
+    "tender_id": "GEM/2026/T/002009",
+    "bidder_id": "BID-1002",
+    "category": "Medical Equipment",
+    "bid_amount": 4429294,
+    "submission_date": "2026-07-29",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001043",
+    "tender_id": "GEM/2026/T/002009",
+    "bidder_id": "BID-1011",
+    "category": "Medical Equipment",
+    "bid_amount": 4357494,
+    "submission_date": "2026-07-29",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001044",
+    "tender_id": "GEM/2026/T/002010",
+    "bidder_id": "BID-1003",
+    "category": "Medical Equipment",
+    "bid_amount": 2021445,
+    "submission_date": "2026-08-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001045",
+    "tender_id": "GEM/2026/T/002010",
+    "bidder_id": "BID-1001",
+    "category": "Medical Equipment",
+    "bid_amount": 1945859,
+    "submission_date": "2026-08-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001046",
+    "tender_id": "GEM/2026/T/002010",
+    "bidder_id": "BID-1006",
+    "category": "Medical Equipment",
+    "bid_amount": 2056758,
+    "submission_date": "2026-08-03",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001047",
+    "tender_id": "GEM/2026/T/002010",
+    "bidder_id": "BID-1004",
+    "category": "Medical Equipment",
+    "bid_amount": 2008619,
+    "submission_date": "2026-08-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001048",
+    "tender_id": "GEM/2026/T/002010",
+    "bidder_id": "BID-1014",
+    "category": "Medical Equipment",
+    "bid_amount": 2017988,
+    "submission_date": "2026-08-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001049",
+    "tender_id": "GEM/2026/T/002011",
+    "bidder_id": "BID-1002",
+    "category": "Construction Materials",
+    "bid_amount": 4225721,
+    "submission_date": "2026-08-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001050",
+    "tender_id": "GEM/2026/T/002011",
+    "bidder_id": "BID-1005",
+    "category": "Construction Materials",
+    "bid_amount": 4494243,
+    "submission_date": "2026-08-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001051",
+    "tender_id": "GEM/2026/T/002011",
+    "bidder_id": "BID-1004",
+    "category": "Construction Materials",
+    "bid_amount": 4459651,
+    "submission_date": "2026-08-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001052",
+    "tender_id": "GEM/2026/T/002011",
+    "bidder_id": "BID-1006",
+    "category": "Construction Materials",
+    "bid_amount": 4441472,
+    "submission_date": "2026-08-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001053",
+    "tender_id": "GEM/2026/T/002011",
+    "bidder_id": "BID-1001",
+    "category": "Construction Materials",
+    "bid_amount": 4434290,
+    "submission_date": "2026-08-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001054",
+    "tender_id": "GEM/2026/T/002011",
+    "bidder_id": "BID-1011",
+    "category": "Construction Materials",
+    "bid_amount": 4403031,
+    "submission_date": "2026-08-10",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001055",
+    "tender_id": "GEM/2026/T/002012",
+    "bidder_id": "BID-1003",
+    "category": "Cleaning Services",
+    "bid_amount": 458636,
+    "submission_date": "2026-08-18",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001056",
+    "tender_id": "GEM/2026/T/002012",
+    "bidder_id": "BID-1004",
+    "category": "Cleaning Services",
+    "bid_amount": 463534,
+    "submission_date": "2026-08-18",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001057",
+    "tender_id": "GEM/2026/T/002012",
+    "bidder_id": "BID-1002",
+    "category": "Cleaning Services",
+    "bid_amount": 454421,
+    "submission_date": "2026-08-18",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001058",
+    "tender_id": "GEM/2026/T/002012",
+    "bidder_id": "BID-1001",
+    "category": "Cleaning Services",
+    "bid_amount": 440542,
+    "submission_date": "2026-08-18",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001059",
+    "tender_id": "GEM/2026/T/002012",
+    "bidder_id": "BID-1010",
+    "category": "Cleaning Services",
+    "bid_amount": 472357,
+    "submission_date": "2026-08-18",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001060",
+    "tender_id": "GEM/2026/T/002013",
+    "bidder_id": "BID-1007",
+    "category": "Electrical Goods",
+    "bid_amount": 1666971,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001061",
+    "tender_id": "GEM/2026/T/002013",
+    "bidder_id": "BID-1008",
+    "category": "Electrical Goods",
+    "bid_amount": 1635430,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001062",
+    "tender_id": "GEM/2026/T/002013",
+    "bidder_id": "BID-1018",
+    "category": "Electrical Goods",
+    "bid_amount": 1727630,
+    "submission_date": "2026-06-11",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001063",
+    "tender_id": "GEM/2026/T/002013",
+    "bidder_id": "BID-1017",
+    "category": "Electrical Goods",
+    "bid_amount": 1384989,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001064",
+    "tender_id": "GEM/2026/T/002014",
+    "bidder_id": "BID-1007",
+    "category": "Vehicles & Transport",
+    "bid_amount": 6356165,
+    "submission_date": "2026-06-20",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001065",
+    "tender_id": "GEM/2026/T/002014",
+    "bidder_id": "BID-1008",
+    "category": "Vehicles & Transport",
+    "bid_amount": 4687539,
+    "submission_date": "2026-06-20",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001066",
+    "tender_id": "GEM/2026/T/002014",
+    "bidder_id": "BID-1015",
+    "category": "Vehicles & Transport",
+    "bid_amount": 5158924,
+    "submission_date": "2026-06-20",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001067",
+    "tender_id": "GEM/2026/T/002014",
+    "bidder_id": "BID-1016",
+    "category": "Vehicles & Transport",
+    "bid_amount": 4510101,
+    "submission_date": "2026-06-20",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001068",
+    "tender_id": "GEM/2026/T/002015",
+    "bidder_id": "BID-1007",
+    "category": "Cleaning Services",
+    "bid_amount": 1551068,
+    "submission_date": "2026-06-29",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001069",
+    "tender_id": "GEM/2026/T/002015",
+    "bidder_id": "BID-1008",
+    "category": "Cleaning Services",
+    "bid_amount": 1627359,
+    "submission_date": "2026-06-29",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001070",
+    "tender_id": "GEM/2026/T/002015",
+    "bidder_id": "BID-1014",
+    "category": "Cleaning Services",
+    "bid_amount": 1884410,
+    "submission_date": "2026-06-29",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001071",
+    "tender_id": "GEM/2026/T/002015",
+    "bidder_id": "BID-1010",
+    "category": "Cleaning Services",
+    "bid_amount": 1400587,
+    "submission_date": "2026-06-29",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001072",
+    "tender_id": "GEM/2026/T/002016",
+    "bidder_id": "BID-1007",
+    "category": "Vehicles & Transport",
+    "bid_amount": 5110092,
+    "submission_date": "2026-07-08",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001073",
+    "tender_id": "GEM/2026/T/002016",
+    "bidder_id": "BID-1008",
+    "category": "Vehicles & Transport",
+    "bid_amount": 5049288,
+    "submission_date": "2026-07-08",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001074",
+    "tender_id": "GEM/2026/T/002016",
+    "bidder_id": "BID-1013",
+    "category": "Vehicles & Transport",
+    "bid_amount": 4148793,
+    "submission_date": "2026-07-08",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001075",
+    "tender_id": "GEM/2026/T/002016",
+    "bidder_id": "BID-1018",
+    "category": "Vehicles & Transport",
+    "bid_amount": 4349767,
+    "submission_date": "2026-07-08",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001076",
+    "tender_id": "GEM/2026/T/002017",
+    "bidder_id": "BID-1010",
+    "category": "Stationery",
+    "bid_amount": 3714293,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001077",
+    "tender_id": "GEM/2026/T/002017",
+    "bidder_id": "BID-1015",
+    "category": "Stationery",
+    "bid_amount": 2997610,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001078",
+    "tender_id": "GEM/2026/T/002017",
+    "bidder_id": "BID-1014",
+    "category": "Stationery",
+    "bid_amount": 3104445,
+    "submission_date": "2026-06-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001079",
+    "tender_id": "GEM/2026/T/002017",
+    "bidder_id": "BID-1012",
+    "category": "Stationery",
+    "bid_amount": 3877751,
+    "submission_date": "2026-06-02",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001080",
+    "tender_id": "GEM/2026/T/002017",
+    "bidder_id": "BID-1013",
+    "category": "Stationery",
+    "bid_amount": 3937422,
+    "submission_date": "2026-06-02",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001081",
+    "tender_id": "GEM/2026/T/002018",
+    "bidder_id": "BID-1017",
+    "category": "Cleaning Services",
+    "bid_amount": 2616523,
+    "submission_date": "2026-06-08",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001082",
+    "tender_id": "GEM/2026/T/002018",
+    "bidder_id": "BID-1010",
+    "category": "Cleaning Services",
+    "bid_amount": 2542450,
+    "submission_date": "2026-06-08",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001083",
+    "tender_id": "GEM/2026/T/002018",
+    "bidder_id": "BID-1009",
+    "category": "Cleaning Services",
+    "bid_amount": 3307037,
+    "submission_date": "2026-06-08",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001084",
+    "tender_id": "GEM/2026/T/002019",
+    "bidder_id": "BID-1013",
+    "category": "Security Services",
+    "bid_amount": 816463,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001085",
+    "tender_id": "GEM/2026/T/002019",
+    "bidder_id": "BID-1012",
+    "category": "Security Services",
+    "bid_amount": 686971,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001086",
+    "tender_id": "GEM/2026/T/002019",
+    "bidder_id": "BID-1014",
+    "category": "Security Services",
+    "bid_amount": 784301,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001087",
+    "tender_id": "GEM/2026/T/002019",
+    "bidder_id": "BID-1017",
+    "category": "Security Services",
+    "bid_amount": 609372,
+    "submission_date": "2026-06-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001088",
+    "tender_id": "GEM/2026/T/002020",
+    "bidder_id": "BID-1013",
+    "category": "Stationery",
+    "bid_amount": 2704510,
+    "submission_date": "2026-06-16",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001089",
+    "tender_id": "GEM/2026/T/002020",
+    "bidder_id": "BID-1015",
+    "category": "Stationery",
+    "bid_amount": 2205552,
+    "submission_date": "2026-06-16",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001090",
+    "tender_id": "GEM/2026/T/002020",
+    "bidder_id": "BID-1018",
+    "category": "Stationery",
+    "bid_amount": 3107671,
+    "submission_date": "2026-06-16",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001091",
+    "tender_id": "GEM/2026/T/002021",
+    "bidder_id": "BID-1009",
+    "category": "Electrical Goods",
+    "bid_amount": 3525888,
+    "submission_date": "2026-06-19",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001092",
+    "tender_id": "GEM/2026/T/002021",
+    "bidder_id": "BID-1014",
+    "category": "Electrical Goods",
+    "bid_amount": 2734413,
+    "submission_date": "2026-06-19",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001093",
+    "tender_id": "GEM/2026/T/002021",
+    "bidder_id": "BID-1015",
+    "category": "Electrical Goods",
+    "bid_amount": 2921271,
+    "submission_date": "2026-06-19",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001094",
+    "tender_id": "GEM/2026/T/002022",
+    "bidder_id": "BID-1017",
+    "category": "Security Services",
+    "bid_amount": 2507359,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001095",
+    "tender_id": "GEM/2026/T/002022",
+    "bidder_id": "BID-1018",
+    "category": "Security Services",
+    "bid_amount": 2357147,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001096",
+    "tender_id": "GEM/2026/T/002022",
+    "bidder_id": "BID-1012",
+    "category": "Security Services",
+    "bid_amount": 2029274,
+    "submission_date": "2026-06-22",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001097",
+    "tender_id": "GEM/2026/T/002022",
+    "bidder_id": "BID-1009",
+    "category": "Security Services",
+    "bid_amount": 1977477,
+    "submission_date": "2026-06-22",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001098",
+    "tender_id": "GEM/2026/T/002022",
+    "bidder_id": "BID-1013",
+    "category": "Security Services",
+    "bid_amount": 1722303,
+    "submission_date": "2026-06-22",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001099",
+    "tender_id": "GEM/2026/T/002023",
+    "bidder_id": "BID-1018",
+    "category": "Stationery",
+    "bid_amount": 2382748,
+    "submission_date": "2026-06-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001100",
+    "tender_id": "GEM/2026/T/002023",
+    "bidder_id": "BID-1014",
+    "category": "Stationery",
+    "bid_amount": 2630547,
+    "submission_date": "2026-06-25",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001101",
+    "tender_id": "GEM/2026/T/002023",
+    "bidder_id": "BID-1017",
+    "category": "Stationery",
+    "bid_amount": 2301126,
+    "submission_date": "2026-06-25",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001102",
+    "tender_id": "GEM/2026/T/002024",
+    "bidder_id": "BID-1013",
+    "category": "Furniture",
+    "bid_amount": 2898838,
+    "submission_date": "2026-07-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001103",
+    "tender_id": "GEM/2026/T/002024",
+    "bidder_id": "BID-1016",
+    "category": "Furniture",
+    "bid_amount": 3571395,
+    "submission_date": "2026-07-02",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001104",
+    "tender_id": "GEM/2026/T/002024",
+    "bidder_id": "BID-1015",
+    "category": "Furniture",
+    "bid_amount": 3972822,
+    "submission_date": "2026-07-02",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001105",
+    "tender_id": "GEM/2026/T/002025",
+    "bidder_id": "BID-1011",
+    "category": "Vehicles & Transport",
+    "bid_amount": 3313931,
+    "submission_date": "2026-07-03",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001106",
+    "tender_id": "GEM/2026/T/002025",
+    "bidder_id": "BID-1010",
+    "category": "Vehicles & Transport",
+    "bid_amount": 2816224,
+    "submission_date": "2026-07-03",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001107",
+    "tender_id": "GEM/2026/T/002025",
+    "bidder_id": "BID-1016",
+    "category": "Vehicles & Transport",
+    "bid_amount": 3002924,
+    "submission_date": "2026-07-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001108",
+    "tender_id": "GEM/2026/T/002025",
+    "bidder_id": "BID-1012",
+    "category": "Vehicles & Transport",
+    "bid_amount": 3521536,
+    "submission_date": "2026-07-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001109",
+    "tender_id": "GEM/2026/T/002025",
+    "bidder_id": "BID-1014",
+    "category": "Vehicles & Transport",
+    "bid_amount": 3336949,
+    "submission_date": "2026-07-03",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001110",
+    "tender_id": "GEM/2026/T/002026",
+    "bidder_id": "BID-1018",
+    "category": "Stationery",
+    "bid_amount": 589526,
+    "submission_date": "2026-07-09",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001111",
+    "tender_id": "GEM/2026/T/002026",
+    "bidder_id": "BID-1009",
+    "category": "Stationery",
+    "bid_amount": 510433,
+    "submission_date": "2026-07-09",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001112",
+    "tender_id": "GEM/2026/T/002026",
+    "bidder_id": "BID-1010",
+    "category": "Stationery",
+    "bid_amount": 431603,
+    "submission_date": "2026-07-09",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001113",
+    "tender_id": "GEM/2026/T/002026",
+    "bidder_id": "BID-1012",
+    "category": "Stationery",
+    "bid_amount": 461067,
+    "submission_date": "2026-07-09",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001114",
+    "tender_id": "GEM/2026/T/002027",
+    "bidder_id": "BID-1012",
+    "category": "Office Supplies",
+    "bid_amount": 4331119,
+    "submission_date": "2026-07-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001115",
+    "tender_id": "GEM/2026/T/002027",
+    "bidder_id": "BID-1009",
+    "category": "Office Supplies",
+    "bid_amount": 3373899,
+    "submission_date": "2026-07-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001116",
+    "tender_id": "GEM/2026/T/002027",
+    "bidder_id": "BID-1013",
+    "category": "Office Supplies",
+    "bid_amount": 3204012,
+    "submission_date": "2026-07-11",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001117",
+    "tender_id": "GEM/2026/T/002028",
+    "bidder_id": "BID-1014",
+    "category": "Construction Materials",
+    "bid_amount": 3385395,
+    "submission_date": "2026-07-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001118",
+    "tender_id": "GEM/2026/T/002028",
+    "bidder_id": "BID-1013",
+    "category": "Construction Materials",
+    "bid_amount": 3642827,
+    "submission_date": "2026-07-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001119",
+    "tender_id": "GEM/2026/T/002028",
+    "bidder_id": "BID-1017",
+    "category": "Construction Materials",
+    "bid_amount": 3895250,
+    "submission_date": "2026-07-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001120",
+    "tender_id": "GEM/2026/T/002028",
+    "bidder_id": "BID-1018",
+    "category": "Construction Materials",
+    "bid_amount": 3058943,
+    "submission_date": "2026-07-17",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001121",
+    "tender_id": "GEM/2026/T/002028",
+    "bidder_id": "BID-1010",
+    "category": "Construction Materials",
+    "bid_amount": 3917582,
+    "submission_date": "2026-07-17",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001122",
+    "tender_id": "GEM/2026/T/002029",
+    "bidder_id": "BID-1015",
+    "category": "Medical Equipment",
+    "bid_amount": 4927095,
+    "submission_date": "2026-07-21",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001123",
+    "tender_id": "GEM/2026/T/002029",
+    "bidder_id": "BID-1012",
+    "category": "Medical Equipment",
+    "bid_amount": 3507723,
+    "submission_date": "2026-07-21",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001124",
+    "tender_id": "GEM/2026/T/002029",
+    "bidder_id": "BID-1013",
+    "category": "Medical Equipment",
+    "bid_amount": 4232385,
+    "submission_date": "2026-07-21",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001125",
+    "tender_id": "GEM/2026/T/002030",
+    "bidder_id": "BID-1012",
+    "category": "Stationery",
+    "bid_amount": 2497584,
+    "submission_date": "2026-07-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001126",
+    "tender_id": "GEM/2026/T/002030",
+    "bidder_id": "BID-1010",
+    "category": "Stationery",
+    "bid_amount": 3533036,
+    "submission_date": "2026-07-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001127",
+    "tender_id": "GEM/2026/T/002030",
+    "bidder_id": "BID-1014",
+    "category": "Stationery",
+    "bid_amount": 3102109,
+    "submission_date": "2026-07-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001128",
+    "tender_id": "GEM/2026/T/002030",
+    "bidder_id": "BID-1017",
+    "category": "Stationery",
+    "bid_amount": 2467235,
+    "submission_date": "2026-07-25",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001129",
+    "tender_id": "GEM/2026/T/002031",
+    "bidder_id": "BID-1016",
+    "category": "Office Supplies",
+    "bid_amount": 4110061,
+    "submission_date": "2026-07-28",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001130",
+    "tender_id": "GEM/2026/T/002031",
+    "bidder_id": "BID-1012",
+    "category": "Office Supplies",
+    "bid_amount": 5540997,
+    "submission_date": "2026-07-28",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001131",
+    "tender_id": "GEM/2026/T/002031",
+    "bidder_id": "BID-1013",
+    "category": "Office Supplies",
+    "bid_amount": 5430846,
+    "submission_date": "2026-07-28",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001132",
+    "tender_id": "GEM/2026/T/002032",
+    "bidder_id": "BID-1012",
+    "category": "Vehicles & Transport",
+    "bid_amount": 1536626,
+    "submission_date": "2026-07-31",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001133",
+    "tender_id": "GEM/2026/T/002032",
+    "bidder_id": "BID-1014",
+    "category": "Vehicles & Transport",
+    "bid_amount": 1304629,
+    "submission_date": "2026-07-31",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001134",
+    "tender_id": "GEM/2026/T/002032",
+    "bidder_id": "BID-1015",
+    "category": "Vehicles & Transport",
+    "bid_amount": 1551864,
+    "submission_date": "2026-07-31",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001135",
+    "tender_id": "GEM/2026/T/002032",
+    "bidder_id": "BID-1016",
+    "category": "Vehicles & Transport",
+    "bid_amount": 1114659,
+    "submission_date": "2026-07-31",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001136",
+    "tender_id": "GEM/2026/T/002032",
+    "bidder_id": "BID-1010",
+    "category": "Vehicles & Transport",
+    "bid_amount": 1596629,
+    "submission_date": "2026-07-31",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001137",
+    "tender_id": "GEM/2026/T/002033",
+    "bidder_id": "BID-1012",
+    "category": "Stationery",
+    "bid_amount": 725311,
+    "submission_date": "2026-08-05",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001138",
+    "tender_id": "GEM/2026/T/002033",
+    "bidder_id": "BID-1011",
+    "category": "Stationery",
+    "bid_amount": 762620,
+    "submission_date": "2026-08-05",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001139",
+    "tender_id": "GEM/2026/T/002033",
+    "bidder_id": "BID-1013",
+    "category": "Stationery",
+    "bid_amount": 866985,
+    "submission_date": "2026-08-05",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001140",
+    "tender_id": "GEM/2026/T/002033",
+    "bidder_id": "BID-1015",
+    "category": "Stationery",
+    "bid_amount": 899947,
+    "submission_date": "2026-08-05",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001141",
+    "tender_id": "GEM/2026/T/002033",
+    "bidder_id": "BID-1017",
+    "category": "Stationery",
+    "bid_amount": 658749,
+    "submission_date": "2026-08-05",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001142",
+    "tender_id": "GEM/2026/T/002034",
+    "bidder_id": "BID-1016",
+    "category": "Medical Equipment",
+    "bid_amount": 3921291,
+    "submission_date": "2026-08-09",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001143",
+    "tender_id": "GEM/2026/T/002034",
+    "bidder_id": "BID-1011",
+    "category": "Medical Equipment",
+    "bid_amount": 4996267,
+    "submission_date": "2026-08-09",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001144",
+    "tender_id": "GEM/2026/T/002034",
+    "bidder_id": "BID-1014",
+    "category": "Medical Equipment",
+    "bid_amount": 4434781,
+    "submission_date": "2026-08-09",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001145",
+    "tender_id": "GEM/2026/T/002034",
+    "bidder_id": "BID-1017",
+    "category": "Medical Equipment",
+    "bid_amount": 4528186,
+    "submission_date": "2026-08-09",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001146",
+    "tender_id": "GEM/2026/T/002035",
+    "bidder_id": "BID-1016",
+    "category": "Stationery",
+    "bid_amount": 1675984,
+    "submission_date": "2026-08-15",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001147",
+    "tender_id": "GEM/2026/T/002035",
+    "bidder_id": "BID-1012",
+    "category": "Stationery",
+    "bid_amount": 1652337,
+    "submission_date": "2026-08-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001148",
+    "tender_id": "GEM/2026/T/002035",
+    "bidder_id": "BID-1013",
+    "category": "Stationery",
+    "bid_amount": 1679753,
+    "submission_date": "2026-08-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001149",
+    "tender_id": "GEM/2026/T/002035",
+    "bidder_id": "BID-1009",
+    "category": "Stationery",
+    "bid_amount": 1830041,
+    "submission_date": "2026-08-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001150",
+    "tender_id": "GEM/2026/T/002035",
+    "bidder_id": "BID-1010",
+    "category": "Stationery",
+    "bid_amount": 1867085,
+    "submission_date": "2026-08-15",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001151",
+    "tender_id": "GEM/2026/T/002036",
+    "bidder_id": "BID-1018",
+    "category": "Security Services",
+    "bid_amount": 3828467,
+    "submission_date": "2026-08-16",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001152",
+    "tender_id": "GEM/2026/T/002036",
+    "bidder_id": "BID-1012",
+    "category": "Security Services",
+    "bid_amount": 4840779,
+    "submission_date": "2026-08-16",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001153",
+    "tender_id": "GEM/2026/T/002036",
+    "bidder_id": "BID-1013",
+    "category": "Security Services",
+    "bid_amount": 4210046,
+    "submission_date": "2026-08-16",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001154",
+    "tender_id": "GEM/2026/T/002036",
+    "bidder_id": "BID-1016",
+    "category": "Security Services",
+    "bid_amount": 3929232,
+    "submission_date": "2026-08-16",
+    "verification_status": "Needs Review"
+  },
+  {
+    "bid_id": "GEM/2026/B/001155",
+    "tender_id": "GEM/2026/T/002037",
+    "bidder_id": "BID-1014",
+    "category": "Cleaning Services",
+    "bid_amount": 2826070,
+    "submission_date": "2026-08-23",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001156",
+    "tender_id": "GEM/2026/T/002037",
+    "bidder_id": "BID-1013",
+    "category": "Cleaning Services",
+    "bid_amount": 2749141,
+    "submission_date": "2026-08-23",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001157",
+    "tender_id": "GEM/2026/T/002037",
+    "bidder_id": "BID-1010",
+    "category": "Cleaning Services",
+    "bid_amount": 2580697,
+    "submission_date": "2026-08-23",
+    "verification_status": "Rejected"
+  },
+  {
+    "bid_id": "GEM/2026/B/001158",
+    "tender_id": "GEM/2026/T/002037",
+    "bidder_id": "BID-1018",
+    "category": "Cleaning Services",
+    "bid_amount": 2478726,
+    "submission_date": "2026-08-23",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001159",
+    "tender_id": "GEM/2026/T/002038",
+    "bidder_id": "BID-1011",
+    "category": "Cleaning Services",
+    "bid_amount": 4183705,
+    "submission_date": "2026-08-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001160",
+    "tender_id": "GEM/2026/T/002038",
+    "bidder_id": "BID-1018",
+    "category": "Cleaning Services",
+    "bid_amount": 4571896,
+    "submission_date": "2026-08-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001161",
+    "tender_id": "GEM/2026/T/002038",
+    "bidder_id": "BID-1017",
+    "category": "Cleaning Services",
+    "bid_amount": 6066323,
+    "submission_date": "2026-08-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001162",
+    "tender_id": "GEM/2026/T/002038",
+    "bidder_id": "BID-1013",
+    "category": "Cleaning Services",
+    "bid_amount": 4361189,
+    "submission_date": "2026-08-25",
+    "verification_status": "Verified"
+  },
+  {
+    "bid_id": "GEM/2026/B/001163",
+    "tender_id": "GEM/2026/T/002038",
+    "bidder_id": "BID-1015",
+    "category": "Cleaning Services",
+    "bid_amount": 6016232,
+    "submission_date": "2026-08-25",
+    "verification_status": "Verified"
+  }
+]

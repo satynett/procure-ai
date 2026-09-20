@@ -1,0 +1,17 @@
+# Builds the React client, then serves it alongside the API from the Node BFF.
+FROM node:20-slim AS client-build
+WORKDIR /build
+COPY client/package*.json ./client/
+RUN npm ci --prefix client || npm install --prefix client
+COPY client ./client
+RUN npm run build --prefix client
+
+FROM node:20-slim
+ENV NODE_ENV=production
+WORKDIR /app
+COPY server/package*.json ./
+RUN npm ci --omit=dev || npm install --omit=dev
+COPY server ./
+COPY --from=client-build /build/client/dist ./public
+EXPOSE 4000
+CMD ["node", "index.js"]

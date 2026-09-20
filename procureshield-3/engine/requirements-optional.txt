@@ -1,0 +1,3 @@
+# Optional extras.
+# Neo4j graph backend (set PROCURESHIELD_GRAPH_BACKEND=neo4j to activate).
+neo4j>=5.18
