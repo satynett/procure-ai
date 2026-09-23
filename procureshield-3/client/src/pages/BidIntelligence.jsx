@@ -90,7 +90,7 @@ export default function BidIntelligence() {
         results.push({ ...result, filename: file.name });
       }
       setChecks(results);
-      const gov = await api.governmentVerification("BID-1001");
+      const gov = await api.governmentVerification("BID-2001");
       setGovernmentCheck(gov);
     } catch (e) {
       setError(e.message || "Document check failed.");
