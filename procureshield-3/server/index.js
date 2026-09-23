@@ -44,6 +44,7 @@ import { buildChecklist, buildTenderComparison } from "./utils/checklist.js";
 import { toCsv } from "./utils/csv.js";
 import { requireAuth, DEMO_TOKEN } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
+import { initDatabase, getCollection, replaceCollection } from "./db/store.js";
 
 dotenv.config();
 
@@ -60,27 +61,29 @@ const VALID_VERIFICATION_STATUSES = ["Verified", "Needs Review", "Rejected"];
 const MAX_COMMENT_LENGTH = 1000;
 
 // ---------------------------------------------------------------------
-// Data access helpers (JSON-file "database" for the prototype)
+// PostgreSQL-backed data access.
+// The route layer keeps the existing array-shaped API contract so the
+// React UI and Python risk engine do not need to change during migration.
 // ---------------------------------------------------------------------
+const COLLECTION_BY_FILE = {
+  "bidders.json": "bidders",
+  "bids.json": "bids",
+  "tenders.json": "tenders",
+  "auditLog.json": "auditLog",
+};
+
 function readJson(file) {
-  return JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf-8"));
+  const collection = COLLECTION_BY_FILE[file];
+  return collection ? getCollection(collection) : [];
 }
-function writeJson(file, data) {
-  fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
+async function writeJson(file, data) {
+  const collection = COLLECTION_BY_FILE[file];
+  if (!collection) throw new Error("Unknown data collection: " + file);
+  await replaceCollection(collection, data);
 }
-function getBidders() {
-  return readJson("bidders.json");
-}
-function getBids() {
-  return readJson("bids.json");
-}
-function getTenders() {
-  try {
-    return readJson("tenders.json");
-  } catch {
-    return [];
-  }
-}
+function getBidders() { return readJson("bidders.json"); }
+function getBids() { return readJson("bids.json"); }
+function getTenders() { return readJson("tenders.json"); }
 
 function decorateTender(tender, bids, bidders) {
   const tenderBids = bids.filter((b) => b.tender_id === tender.tender_id);
@@ -99,16 +102,12 @@ function decorateTender(tender, bids, bidders) {
 }
 
 function getAuditLog() {
-  try {
-    return readJson("auditLog.json");
-  } catch {
-    return [];
-  }
+  return readJson("auditLog.json");
 }
-function appendAuditLog(entry) {
+async function appendAuditLog(entry) {
   const log = getAuditLog();
   log.unshift(entry);
-  writeJson("auditLog.json", log);
+  await writeJson("auditLog.json", log);
   return log;
 }
 
@@ -335,12 +334,12 @@ app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
     rfp_content_base64,rfp_text:rfp.text||"",eligibility_summary:summary,eligibility_requirements:parsed.eligibility_requirements||[],
     technical_requirements:parsed.technical_requirements||[],required_documents:parsed.required_documents||[],important_dates:parsed.important_dates||[],
     parser:parsed.parser||"deterministic-prototype",created_at:new Date().toISOString(),published_at:publish?new Date().toISOString():null};
-  tenders.unshift(tender); writeJson("tenders.json",tenders);
-  appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:publish?"Tender Published":"Tender Created as Draft",tender_id:tender.tender_id,timestamp:new Date().toISOString(),rfp_filename:tender.rfp_filename});
+  tenders.unshift(tender); await writeJson("tenders.json",tenders);
+  await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:publish?"Tender Published":"Tender Created as Draft",tender_id:tender.tender_id,timestamp:new Date().toISOString(),rfp_filename:tender.rfp_filename});
   res.status(201).json({tender:decorateTender(tender,getBids(),getBidders())});
 }));
 
-app.patch("/api/officer/tenders/:id",(req,res)=>{
+app.patch("/api/officer/tenders/:id",async (req,res)=>{
   const tenderId=decodeURIComponent(req.params.id); const tenders=getTenders(); const idx=tenders.findIndex(t=>t.tender_id===tenderId);
   if(idx===-1) return res.status(404).json({message:"Tender not found"}); const tender={...tenders[idx]}; const action=req.body?.action;
   if(!["publish","close","withdraw","award"].includes(action)) return res.status(400).json({message:"Unknown tender action."});
@@ -349,20 +348,20 @@ app.patch("/api/officer/tenders/:id",(req,res)=>{
   if(action==="withdraw"){if(["Awarded","Closed"].includes(tender.status))return res.status(400).json({message:"Closed or awarded tenders cannot be withdrawn."});tender.status="Withdrawn";}
   if(action==="award"){const bid=getBids().find(b=>b.bid_id===req.body?.bid_id&&b.tender_id===tenderId);if(!bid)return res.status(400).json({message:"Select a valid bid for this tender."});
     tender.status="Awarded";tender.closing_date=tender.closing_date||new Date().toISOString().slice(0,10);tender.award_date=new Date().toISOString().slice(0,10);tender.winner_bid_id=bid.bid_id;tender.award_amount=Number(req.body?.award_amount||bid.bid_amount||0);}
-  tenders[idx]=tender;writeJson("tenders.json",tenders);
-  appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:`Tender ${action}`,tender_id:tenderId,bid_id:req.body?.bid_id||null,timestamp:new Date().toISOString(),award_amount:tender.award_amount||null});
+  tenders[idx]=tender;await writeJson("tenders.json",tenders);
+  await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:`Tender ${action}`,tender_id:tenderId,bid_id:req.body?.bid_id||null,timestamp:new Date().toISOString(),award_amount:tender.award_amount||null});
   res.json({tender:decorateTender(tender,getBids(),getBidders())});
 });
 
-app.delete("/api/officer/tenders/:id",(req,res)=>{
+app.delete("/api/officer/tenders/:id",async (req,res)=>{
   const tenderId=decodeURIComponent(req.params.id);const tenders=getTenders();const idx=tenders.findIndex(t=>t.tender_id===tenderId);
   if(idx===-1)return res.status(404).json({message:"Tender not found"});if(!["Draft","Withdrawn"].includes(tenders[idx].status))return res.status(400).json({message:"Only draft or withdrawn tenders can be permanently removed. Use withdraw for an active tender."});
-  tenders.splice(idx,1);writeJson("tenders.json",tenders);appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:"Tender Permanently Removed",tender_id:tenderId,timestamp:new Date().toISOString()});
+  tenders.splice(idx,1);await writeJson("tenders.json",tenders);await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:"Tender Permanently Removed",tender_id:tenderId,timestamp:new Date().toISOString()});
   res.json({success:true,removed:tenderId});
 });
 
 
-app.post("/api/bidder/bids", (req, res) => {
+app.post("/api/bidder/bids", async (req, res) => {
   const { tender_id, company_name, documents = [], bid_amount = null } = req.body || {};
   const tender = getTenders().find((t) => t.tender_id === tender_id);
   if (!tender || tender.status !== "Open") return res.status(400).json({ message: "This tender is not open for bidding." });
@@ -382,7 +381,7 @@ app.post("/api/bidder/bids", (req, res) => {
     submitted_documents: documents.map((d) => typeof d === "string" ? d : d.name).filter(Boolean),
   };
   bids.push(bid);
-  writeJson("bids.json", bids);
+  await writeJson("bids.json", bids);
   res.status(201).json({ success: true, bid });
 });
 
@@ -762,7 +761,7 @@ async function applyVerificationAction(bidId, newStatus, action, comment, res) {
 
   const previousStatus = bids[idx].verification_status;
   bids[idx].verification_status = newStatus;
-  writeJson("bids.json", bids);
+  await writeJson("bids.json", bids);
 
   const entry = {
     id: `AUD-${Date.now()}`,
@@ -774,7 +773,7 @@ async function applyVerificationAction(bidId, newStatus, action, comment, res) {
     new_status: newStatus,
     comment: comment || "",
   };
-  const log = appendAuditLog(entry);
+  const log = await appendAuditLog(entry);
 
   // Verification status is an officer decision, not an engine input, so the
   // cached analysis stays valid and no re-run is triggered here.
@@ -1043,10 +1042,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
+const DB_SEED = String(process.env.DATABASE_SEED || "true").toLowerCase() !== "false";
 
 export { app };
 
 if (process.env.NODE_ENV !== "test") {
+  await initDatabase({ seed: DB_SEED });
   app.listen(PORT, () => {
     console.log(`ProcureShield BFF (SANDBOX/DEMO DATA) on http://localhost:${PORT}`);
     console.log(`Analytics engine: ${engineUrl()}`);
