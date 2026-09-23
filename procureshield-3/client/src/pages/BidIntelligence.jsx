@@ -55,7 +55,7 @@ export default function BidIntelligence() {
   const [loadingTenders, setLoadingTenders] = useState(true);
   const [error, setError] = useState("");
   const [governmentCheck, setGovernmentCheck] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);\n  const [aiDocChecks, setAiDocChecks] = useState([]);
 
   useEffect(() => {
     api.tenders("Open")
@@ -79,7 +79,7 @@ export default function BidIntelligence() {
     setError("");
     setChecks([]);
     setGovernmentCheck(null);
-    setAiAnalysis(null);
+    setAiAnalysis(null);\n    setAiDocChecks([]);
     try {
       const results = [];
       for (const file of files) {
@@ -89,9 +89,22 @@ export default function BidIntelligence() {
           content_type: file.type || "application/pdf",
           content_base64
         });
-        results.push({ ...result, filename: file.name });
+        let aiDoc = null;
+        if (result.text) {
+          aiDoc = await api.intelligenceAIDocumentCheck({
+            filename: file.name,
+            document_text: result.text,
+            tender_id: selectedTender.tender_id,
+            requirements: [
+              ...(selectedTender.eligibility_requirements || []),
+              ...(selectedTender.technical_requirements || []),
+              ...(selectedTender.required_documents || []).map((requirement) => ({ requirement, type: "document", mandatory: true }))
+            ]
+          });
+        }
+        results.push({ ...result, filename: file.name, ai: aiDoc });
       }
-      setChecks(results);
+      setChecks(results);\n      setAiDocChecks(results.map(r => r.ai).filter(Boolean));
       const gov = await api.governmentVerification("BID-2001");
       setGovernmentCheck(gov);
 
@@ -228,7 +241,41 @@ export default function BidIntelligence() {
               </div>}
             </section>
           )}
-          {governmentCheck && (
+              {aiDocChecks.length > 0 && (
+            <section className="rounded-xl border border-violet-200 bg-violet-50/40 p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2"><Sparkles size={18} className="text-violet-600"/><h2 className="font-semibold text-slate-900">AI Evidence Verification</h2></div>
+                  <p className="mt-1 text-sm text-slate-600">AI compares extracted bidder-document evidence with the officer-published requirements. It does not override deterministic compliance or officer decisions.</p>
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-violet-700">{aiDocChecks.filter(x=>x.enabled).length} AI analyses</span>
+              </div>
+              <div className="mt-4 space-y-4">
+                {aiDocChecks.map((doc,i)=>(
+                  <div key={i} className="rounded-lg border border-violet-100 bg-white p-4">
+                    <div className="flex items-center justify-between gap-3"><div className="text-sm font-semibold text-slate-800">{doc.document}</div><span className="text-xs text-slate-500">{doc.model || "AI"} · advisory</span></div>
+                    {doc.error && <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-800">AI unavailable for this document: {doc.error}. Deterministic checks remain active.</div>}
+                    {doc.enabled && !doc.error && <>
+                      <p className="mt-2 text-sm text-slate-600">{doc.summary || "AI evidence comparison completed."}</p>
+                      <div className="mt-3 space-y-2">
+                        {(doc.checks || []).map((item,j)=>(
+                          <div key={j} className="rounded-lg border border-slate-100 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="text-sm font-medium text-slate-800">{item.requirement}</div>
+                              <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${item.status==="matched"?"bg-emerald-50 text-emerald-700":item.status==="mismatch"?"bg-red-50 text-red-700":item.status==="missing"?"bg-slate-100 text-slate-600":"bg-amber-50 text-amber-700"}`}>{item.status.replace("_"," ")} · {item.confidence}%</span>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">{item.explanation}</div>
+                            {item.evidence && <div className="mt-2 rounded bg-slate-50 p-2 text-[11px] text-slate-600"><strong>Evidence:</strong> {item.evidence}</div>}
+                          </div>
+                        ))}
+                      </div>
+                      {(doc.uncertainties || []).length > 0 && <div className="mt-3 rounded bg-amber-50 p-2 text-xs text-amber-800"><strong>Review flags:</strong> {doc.uncertainties.join(" · ")}</div>}
+                    </>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}\n          {governmentCheck && (
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
