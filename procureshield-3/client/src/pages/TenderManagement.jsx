@@ -17,6 +17,7 @@ export default function TenderManagement() {
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
   const [selectedBid,setSelectedBid]=useState("");
+  const [bidderHistory,setBidderHistory]=useState(null);
   const [awardAmount,setAwardAmount]=useState("");
 
   async function load() {
@@ -41,6 +42,9 @@ export default function TenderManagement() {
 
   if (!data) return <div className="flex h-64 items-center justify-center text-slate-400"><Loader2 className="animate-spin"/></div>;
   const t=data.tender, bids=data.bids || [];
+  async function openBidderHistory(bidderId) {
+    try { setBidderHistory(await api.bidderDetail(bidderId)); } catch(e) { setError(e.message || "Unable to load bidder history."); }
+  }
 
   function viewRfp() {
     if (!t.rfp_content_base64) return;
@@ -89,10 +93,33 @@ export default function TenderManagement() {
 
       {tab==="overview" && <Overview t={t} data={data} bids={bids} onBidders={()=>setTab("bidders")} />}
       {tab==="rfp" && <RfpTab t={t} onView={viewRfp} />}
-      {tab==="bidders" && <BiddersTab bids={bids} t={t} onAward={(bid)=>{setSelectedBid(bid.bid_id);setAwardAmount(String(bid.quoted_amount||""));setTab("overview");}} />}
+      {tab==="bidders" && <BiddersTab bids={bids} t={t} onHistory={openBidderHistory} onAward={(bid)=>{setSelectedBid(bid.bid_id);setAwardAmount(String(bid.quoted_amount||""));setTab("overview");}} />}
       {tab==="compliance" && <ComplianceTab bids={bids} />}
       {tab==="risk" && <RiskTab bids={bids} onOpenBid={(id)=>navigate("/app/bid-verification/"+encodeURIComponent(id))} />}
       {tab==="audit" && <AuditTab tenderId={t.tender_id} />}
+
+      {bidderHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="max-h-[85vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div><div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Bidder History</div><h2 className="mt-1 text-xl font-bold">{bidderHistory.bidder?.company_name || "Bidder"}</h2><p className="mt-1 text-sm text-slate-500">{bidderHistory.bidder?.email || "—"} · {bidderHistory.bidder?.gst_number || "—"}</p></div>
+              <button onClick={()=>setBidderHistory(null)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">Close</button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-4">
+              <Info label="Email" value={bidderHistory.bidder?.email || "—"}/>
+              <Info label="Phone" value={bidderHistory.bidder?.phone_masked || bidderHistory.bidder?.phone || "—"}/>
+              <Info label="GSTIN" value={bidderHistory.bidder?.gst_number || "—"}/>
+              <Info label="MSME" value={bidderHistory.bidder?.msme_status || "—"}/>
+            </div>
+            <h3 className="mt-6 font-semibold">Previous tender participation</h3>
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-left text-sm"><thead><tr className="border-b text-xs text-slate-500"><th className="p-3">Tender</th><th className="p-3">Submitted</th><th className="p-3">Bid amount</th><th className="p-3">Status</th></tr></thead>
+              <tbody>{(bidderHistory.bids||[]).map(b=><tr key={b.bid_id} className="border-b border-slate-100"><td className="p-3"><div className="font-medium">{b.tender_id}</div><div className="text-xs text-slate-500">{b.category}</div></td><td className="p-3">{b.submission_date||"—"}</td><td className="p-3 font-semibold">{money(b.bid_amount)}</td><td className="p-3">{b.verification_status||"—"}</td></tr>)}</tbody></table>
+            </div>
+            <p className="mt-4 text-xs text-slate-500">Historical bids come from the shared bid dataset. Government estimated/award values are shown on each tender's management page.</p>
+          </div>
+        </div>
+      )}
 
       {selectedBid && t.status !== "Awarded" && (
         <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
@@ -149,12 +176,12 @@ function RfpTab({t,onView}) {
  </div>;
 }
 
-function BiddersTab({bids,t,onAward}) {
+function BiddersTab({bids,t,onAward,onHistory}) {
  return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
    <div className="flex items-center justify-between"><div><h2 className="font-semibold">Bidder participation & history</h2><p className="mt-1 text-sm text-slate-500">Email, quote, government estimate, verification and risk are shown for this tender.</p></div></div>
    <div className="mt-4 overflow-x-auto">
     <table className="min-w-full text-left text-sm"><thead><tr className="border-b text-xs text-slate-500"><th className="p-3">Bidder</th><th className="p-3">Email</th><th className="p-3">Submitted</th><th className="p-3">Bidder quote</th><th className="p-3">Gov. estimate</th><th className="p-3">Status</th><th className="p-3">Risk</th><th className="p-3"></th></tr></thead>
-    <tbody>{bids.length ? bids.map(b=><tr key={b.bid_id} className="border-b border-slate-100 align-top"><td className="p-3"><div className="font-semibold">{b.bidder_name}</div><div className="text-xs text-slate-500">{b.gst_number}</div></td><td className="p-3">{b.bidder_email}</td><td className="p-3">{b.submission_date||"—"}</td><td className="p-3 font-semibold">{money(b.quoted_amount)}</td><td className="p-3">{money(b.government_estimated_value)}</td><td className="p-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass(b.verification_status)}`}>{b.verification_status}</span></td><td className="p-3">{b.risk_score}/100 · {b.risk_category}</td><td className="p-3"><button onClick={()=>onAward(b)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold">Select for Award</button></td></tr>):<tr><td colSpan="8" className="p-8 text-center text-sm text-slate-400">No bids have been submitted for this tender yet.</td></tr>}</tbody></table>
+    <tbody>{bids.length ? bids.map(b=><tr key={b.bid_id} className="border-b border-slate-100 align-top"><td className="p-3"><button onClick={()=>onHistory(b.bidder_id)} className="text-left"><div className="font-semibold text-brand-700 hover:underline">{b.bidder_name}</div><div className="text-xs text-slate-500">{b.gst_number}</div><div className="mt-1 text-[11px] text-brand-600">View bidder history</div></button></td><td className="p-3">{b.bidder_email}</td><td className="p-3">{b.submission_date||"—"}</td><td className="p-3 font-semibold">{money(b.quoted_amount)}</td><td className="p-3">{money(b.government_estimated_value)}</td><td className="p-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass(b.verification_status)}`}>{b.verification_status}</span></td><td className="p-3">{b.risk_score}/100 · {b.risk_category}</td><td className="p-3"><button onClick={()=>onAward(b)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold">Select for Award</button></td></tr>):<tr><td colSpan="8" className="p-8 text-center text-sm text-slate-400">No bids have been submitted for this tender yet.</td></tr>}</tbody></table>
    </div>
    <p className="mt-4 text-xs text-slate-500">A bidder's full cross-tender history remains available through Bid Verification and Bidder Network. This table is the history for the selected tender.</p>
  </section>;
