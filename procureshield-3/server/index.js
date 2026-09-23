@@ -45,6 +45,7 @@ import { toCsv } from "./utils/csv.js";
 import { requireAuth, DEMO_TOKEN } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { initDatabase, getCollection, replaceCollection } from "./db/store.js";
+import { verifyBidderById } from "./sandbox/governmentVerification.js";
 
 dotenv.config();
 
@@ -171,6 +172,25 @@ app.post("/api/auth/login", rateLimit({ windowMs: 60_000, max: 10 }), (req, res)
 // ---------------------------------------------------------------------
 // Engine control surface
 // ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Government Verification Sandbox
+// Synthetic API-compatible checks; no live government systems are called.
+// ---------------------------------------------------------------------
+app.get("/api/gov/verify/:bidderId", asyncRoute(async (req, res) => {
+  const bidderId = decodeURIComponent(req.params.bidderId);
+  const result = verifyBidderById(getBidders(), bidderId);
+  if (!result) return res.status(404).json({ message: "Bidder not found" });
+  res.json(result);
+}));
+
+app.get("/api/gov/gstn/verify/:gstin", asyncRoute(async (req, res) => {
+  const bidders = getBidders();
+  const bidder = bidders.find((b) => String(b.gst_number || "").toUpperCase() === String(req.params.gstin || "").toUpperCase());
+  if (!bidder) return res.status(404).json({ source: "GSTN_SANDBOX", status: "Not Found" });
+  res.json(verifyBidderById(bidders, bidder.bidder_id).checks.find((x) => x.source === "GSTN_SANDBOX"));
+}));
+
 app.get("/api/engine/status", asyncRoute(async (req, res) => {
   res.json(await engineStatus());
 }));
