@@ -55,7 +55,8 @@ export default function BidIntelligence() {
   const [loadingTenders, setLoadingTenders] = useState(true);
   const [error, setError] = useState("");
   const [governmentCheck, setGovernmentCheck] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState(null);\n  const [aiDocChecks, setAiDocChecks] = useState([]);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiDocChecks, setAiDocChecks] = useState([]);
 
   useEffect(() => {
     api.tenders("Open")
