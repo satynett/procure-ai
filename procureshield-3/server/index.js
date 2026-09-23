@@ -350,8 +350,10 @@ app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
   if(rfp.extraction_status!=="success") return res.status(400).json({message:rfp.message||"RFP could not be read."});
   const parsed=rfp.requirements||{};
   // AI interprets the extracted RFP text; deterministic parsing remains the source for compliance fields.
-  let aiAnalysis=null;\n  try { aiAnalysis=await analyzeRfpWithAI(rfp.text||""); } catch (error) {
-    aiAnalysis={enabled:true,provider:"openrouter",model:process.env.OPENROUTER_MODEL||"openrouter/free",error:error.message,fallback_recommended:true};\n  }
+  let aiAnalysis=null;
+  try { aiAnalysis=await analyzeRfpWithAI(rfp.text||""); } catch (error) {
+    aiAnalysis={enabled:true,provider:"openrouter",model:process.env.OPENROUTER_MODEL||"openrouter/free",error:error.message,fallback_recommended:true};
+  }
   const summary=[...(parsed.eligibility_requirements||[]),...(parsed.technical_requirements||[])].map(x=>x.requirement).filter(Boolean).slice(0,8).join(", ")||"Officer review required before publication.";
   const tenders=getTenders(); const year=new Date().getFullYear(); const sequence=String(tenders.length+1).padStart(4,"0");
   const tender={tender_id:`GEM/${year}/T/${sequence}`,title:String(title).trim(),department:String(department).trim(),category:String(category||"General Procurement").trim(),
