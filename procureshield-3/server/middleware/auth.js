@@ -14,7 +14,7 @@
 const DEMO_TOKEN = "demo-session-token";
 
 const PUBLIC_PATHS = new Set(["/api/auth/login", "/api/health", "/api/bids", "/api/tenders", "/api/bidder/bids"]);
-const PUBLIC_PREFIXES = ["/api/intelligence/", "/api/tenders/"];
+const PUBLIC_PREFIXES = ["/api/intelligence/", "/api/tenders/", "/api/gov/"];
 
 export function requireAuth(req, res, next) {
   // Only the API is gated. When the container image also serves the built
