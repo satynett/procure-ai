@@ -13,6 +13,8 @@ import Alerts from "./pages/Alerts.jsx";
 import Reports from "./pages/Reports.jsx";
 import Settings from "./pages/Settings.jsx";
 import BidIntelligence from "./pages/BidIntelligence.jsx";
+import BidderPortal from "./pages/BidderPortal.jsx";
+import OfficerPortal from "./pages/OfficerPortal.jsx";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useApp();
@@ -25,9 +27,12 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/bidder" element={<BidderPortal />} />
+      <Route path="/bidder/documents" element={<BidIntelligence />} />
 
       <Route path="/app/bid-intelligence" element={<ProtectedRoute><BidIntelligence /></ProtectedRoute>} />
       <Route path="/app/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/app/officer" element={<ProtectedRoute><OfficerPortal /></ProtectedRoute>} />
       <Route path="/app/bid-verification" element={<ProtectedRoute><BidVerification /></ProtectedRoute>} />
       <Route path="/app/bid-verification/:bidId" element={<ProtectedRoute><BidDetail /></ProtectedRoute>} />
       <Route path="/app/bidder-network" element={<ProtectedRoute><BidderNetwork /></ProtectedRoute>} />
