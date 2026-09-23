@@ -428,7 +428,13 @@ app.get("/api/bidder/bids", asyncRoute(async (req, res) => {
           : null,
       };
     })
-    .sort((a, b) => String(b.submission_date || "").localeCompare(String(a.submission_date || "")));
+    .sort((a, b) => {
+      const dateA = String(a.submitted_at || a.submission_date || "");
+      const dateB = String(b.submitted_at || b.submission_date || "");
+      const byDate = dateB.localeCompare(dateA);
+      if (byDate !== 0) return byDate;
+      return String(b.bid_id || "").localeCompare(String(a.bid_id || ""), undefined, { numeric: true });
+    });
 
   res.json({ count: bids.length, bids });
 }));
