@@ -349,12 +349,16 @@ app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
   const rfp=await intelligencePdf({filename:rfp_filename||"tender-rfp.pdf",content_base64:rfp_content_base64,content_type:"application/pdf"});
   if(rfp.extraction_status!=="success") return res.status(400).json({message:rfp.message||"RFP could not be read."});
   const parsed=rfp.requirements||{};
+  // AI interprets the extracted RFP text; deterministic parsing remains the source for compliance fields.
+  const aiAnalysis=await analyzeRfpWithAI(rfp.text||"");
   const summary=[...(parsed.eligibility_requirements||[]),...(parsed.technical_requirements||[])].map(x=>x.requirement).filter(Boolean).slice(0,8).join(", ")||"Officer review required before publication.";
   const tenders=getTenders(); const year=new Date().getFullYear(); const sequence=String(tenders.length+1).padStart(4,"0");
   const tender={tender_id:`GEM/${year}/T/${sequence}`,title:String(title).trim(),department:String(department).trim(),category:String(category||"General Procurement").trim(),
     status:publish?"Open":"Draft",deadline:String(deadline),estimated_value:Number(estimated_value||0),rfp_filename:rfp_filename||"tender-rfp.pdf",
     rfp_content_base64,rfp_text:rfp.text||"",eligibility_summary:summary,eligibility_requirements:parsed.eligibility_requirements||[],
     technical_requirements:parsed.technical_requirements||[],required_documents:parsed.required_documents||[],important_dates:parsed.important_dates||[],
+    ai_analysis:aiAnalysis.enabled ? aiAnalysis : null,
+    ai_provider:aiAnalysis.provider||null,ai_model:aiAnalysis.model||null,
     parser:parsed.parser||"deterministic-prototype",created_at:new Date().toISOString(),published_at:publish?new Date().toISOString():null};
   tenders.unshift(tender); await writeJson("tenders.json",tenders);
   await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:publish?"Tender Published":"Tender Created as Draft",tender_id:tender.tender_id,timestamp:new Date().toISOString(),rfp_filename:tender.rfp_filename});
