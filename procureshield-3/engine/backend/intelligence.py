@@ -40,12 +40,15 @@ def extract_pdf(data: bytes, filename: str) -> Dict[str, Any]:
 def extract_requirements(text: str) -> Dict[str, Any]:
     """Extract common procurement requirements using a deterministic parser."""
     source = text or ""
+    # PyMuPDF can extract the rupee symbol as an OCR-like "I" before digits (e.g. I50, I2).
+    # Normalize that artifact so numeric requirements remain extractable.
+    source = re.sub(r"(?<![A-Za-z])I(?=\d)", "", source)
     lowered = source.lower()
     requirements: List[Dict[str, Any]] = []
 
     patterns = [
         (r"(?:minimum|min\.?)[^.\n]{0,80}(\d+)\s*years?[^.\n]{0,80}(?:experience|work)", "experience"),
-        (r"(?:turnover|average annual turnover)[^.\n]{0,80}(?:rs\.?|₹)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*(crore|lakh|million)?", "turnover"),
+        (r"(?:turnover|average annual turnover)[^.\n]{0,80}?(?:rs\.?|₹|I|■)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*(crore|lakh|million)?", "turnover"),
         (r"(?:gst|goods and services tax)[^.\n]{0,80}(?:registration|registered)", "tax"),
         (r"(?:udyam|msme)[^.\n]{0,80}(?:registration|certificate)", "msme"),
         (r"(?:pan)[^.\n]{0,80}(?:card|number|details)", "identity"),
@@ -76,10 +79,42 @@ def extract_requirements(text: str) -> Dict[str, Any]:
         ("gst", "GST certificate"), ("pan", "PAN card"), ("udyam", "Udyam/MSME certificate"),
         ("experience certificate", "Experience certificate"), ("work order", "Work order"),
         ("financial statement", "Financial statement"), ("balance sheet", "Balance sheet"),
-        ("incorporation", "Certificate of incorporation"),
+        ("incorporation", "Certificate of incorporation"), ("emd", "EMD / Bid Security proof"),
+        ("authorization", "Authorization / OEM certificate"), ("iso", "ISO certificate"),
     ]:
         if needle in lowered and label not in required_documents:
             required_documents.append(label)
+
+    # Common technical/commercial clauses. These are deliberately deterministic
+    # so the prototype stays explainable and does not invent requirements.
+    technical_requirements: List[Dict[str, Any]] = []
+    clause_patterns = [
+        (r"(?:delivery|completion)[^.\\n]{0,100}(?:within|in)\\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
+        (r"(?:bid validity|validity of bid)[^.\\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
+        (r"(?:emd|earnest money deposit)[^.\\n]{0,80}?(?:rs\\.?|₹|I|■)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
+        (r"(?:iso)[^.\\n]{0,60}(9001|14001|45001)", "certification"),
+        (r"(?:oem|original equipment manufacturer)[^.\\n]{0,80}(?:authorization|certificate)", "oem"),
+    ]
+    for pattern, kind in clause_patterns:
+        match = re.search(pattern, source, flags=re.I)
+        if not match:
+            continue
+        if kind == "delivery":
+            description = f"Delivery/completion within {match.group(1)} {match.group(2)}"
+        elif kind == "bid_validity":
+            description = f"Bid validity: {match.group(1)} {match.group(2)}"
+        elif kind == "emd":
+            description = f"EMD / Bid Security: {match.group(1)} {match.group(2) or ''}".strip()
+        elif kind == "certification":
+            description = f"ISO {match.group(1)} certification"
+        else:
+            description = "OEM authorization/certificate required"
+        technical_requirements.append({
+            "requirement": description,
+            "type": kind,
+            "mandatory": any(word in lowered for word in ("mandatory", "shall", "must")),
+            "source": "deterministic-prototype-parser",
+        })
 
     dates = re.findall(
         r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}\s+"
@@ -95,8 +130,10 @@ def extract_requirements(text: str) -> Dict[str, Any]:
         "tender_title": title,
         "eligibility_requirements": requirements,
         "required_documents": required_documents,
-        "technical_requirements": [],
-        "financial_requirements": [r for r in requirements if r["type"] == "turnover"],
+        "technical_requirements": technical_requirements,
+        "financial_requirements": [r for r in requirements if r["type"] == "turnover"] + [
+            r for r in technical_requirements if r["type"] == "emd"
+        ],
         "important_dates": dates[:20],
         "parser": "deterministic-prototype",
         "llm_configured": False,
@@ -105,22 +142,50 @@ def extract_requirements(text: str) -> Dict[str, Any]:
 
 
 def validate_document(filename: str, content_type: Optional[str], data: bytes) -> Dict[str, Any]:
+    """Validate a bidder PDF and expose extracted evidence for checklist matching."""
     checks = [
         {"name": "File present", "passed": bool(data)},
         {"name": "PDF extension", "passed": filename.lower().endswith(".pdf")},
         {"name": "Readable PDF", "passed": False},
     ]
+    text = ""
+    pages = 0
     if data and filename.lower().endswith(".pdf"):
         try:
             import fitz
             doc = fitz.open(stream=data, filetype="pdf")
-            checks[2]["passed"] = len(doc) > 0
+            pages = len(doc)
+            text = "\n".join((page.get_text("text") or "") for page in doc).strip()
+            checks[2]["passed"] = pages > 0
             doc.close()
         except Exception:
             pass
+
+    lowered = text.lower()
+    aliases = {
+        "GST certificate": ["gst registration", "gstin", "goods and services tax"],
+        "PAN card": ["pan card", "pan number", "permanent account number"],
+        "Udyam/MSME certificate": ["udyam", "msme"],
+        "Experience certificate": ["experience certificate", "years of relevant experience"],
+        "Work order": ["work order"],
+        "Financial statement": ["financial statement", "turnover"],
+        "Balance sheet": ["balance sheet"],
+        "Certificate of incorporation": ["certificate of incorporation", "incorporation"],
+        "EMD / Bid Security proof": ["emd", "bid security"],
+        "Authorization / OEM certificate": ["oem authorization", "oem certificate", "manufacturer authorization"],
+        "ISO certificate": ["iso 9001", "iso certificate"],
+    }
+    detected_documents = [
+        label for label, needles in aliases.items()
+        if any(needle in lowered for needle in needles)
+    ]
+
     return {
         "document": filename,
         "content_type": content_type,
+        "pages": pages,
+        "text": text,
+        "detected_documents": detected_documents,
         "status": "valid" if all(c["passed"] for c in checks) else "needs_review",
         "checks": checks,
     }

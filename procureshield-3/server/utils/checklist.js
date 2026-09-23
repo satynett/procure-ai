@@ -82,3 +82,95 @@ export function buildChecklist({ bidder, bid, evidenceForBidder }) {
 
   return items;
 }
+
+export function buildTenderComparison({ tender, bidder, bid }) {
+  if (!tender) {
+    return {
+      status: "No tender context",
+      score: 0,
+      matched: 0,
+      total: 0,
+      checks: [],
+      message: "Tender requirements were not available for this bid.",
+    };
+  }
+
+  const submitted = [
+    ...(Array.isArray(bid?.submitted_documents) ? bid.submitted_documents : []),
+    ...(Array.isArray(bid?.documents) ? bid.documents : []),
+  ].map((x) => String(x).toLowerCase());
+
+  const aliases = {
+    "GST certificate": ["gst", "gstin", "goods", "tax"],
+    "PAN card": ["pan", "permanent"],
+    "Udyam/MSME certificate": ["udyam", "msme"],
+    "Experience certificate": ["experience", "work experience"],
+    "Work order": ["work order"],
+    "Financial statement": ["financial", "turnover", "balance"],
+    "Balance sheet": ["balance", "financial"],
+    "Certificate of incorporation": ["incorporation", "company registration"],
+    "EMD / Bid Security proof": ["emd", "bid security", "earnest"],
+    "ISO 9001": ["iso", "9001"],
+    "OEM authorization": ["oem", "authorization", "manufacturer"],
+    "Turnover proof": ["turnover", "financial"],
+    "Quality certificate": ["quality", "certificate"],
+  };
+
+  const profilePass = {
+    "GST certificate": Boolean(bidder?.gst_number),
+    "PAN card": Boolean(bidder?.pan_number),
+    "Udyam/MSME certificate": bidder?.msme_status === "Yes",
+  };
+
+  const required = Array.isArray(tender.required_documents) ? tender.required_documents : [];
+  const checks = required.map((requirement) => {
+    const needles = aliases[requirement] || [String(requirement).toLowerCase()];
+    const fileMatch = submitted.find((name) => needles.some((needle) => name.includes(needle)));
+    if (fileMatch) {
+      return {
+        requirement,
+        status: "matched",
+        evidence: fileMatch,
+        explanation: "A submitted document filename matches this tender requirement.",
+      };
+    }
+    if (profilePass[requirement]) {
+      return {
+        requirement,
+        status: "matched",
+        evidence: requirement === "GST certificate" ? "Bidder GST profile present"
+          : requirement === "PAN card" ? "Bidder PAN profile present"
+          : "Bidder Udyam/MSME profile present",
+        explanation: "The bidder profile contains the corresponding registration information.",
+      };
+    }
+    return {
+      requirement,
+      status: submitted.length ? "missing" : "evidence_required",
+      evidence: submitted.length ? "No matching submitted document found" : "No uploaded document manifest in this bid record",
+      explanation: submitted.length
+        ? "No submitted document was matched to this tender requirement."
+        : "The bid record does not contain an uploaded document manifest; officer evidence review is required.",
+    };
+  });
+
+  const matched = checks.filter((c) => c.status === "matched").length;
+  const missing = checks.filter((c) => c.status === "missing").length;
+  const score = checks.length ? Math.round((matched / checks.length) * 100) : 0;
+
+  return {
+    tender_id: tender.tender_id,
+    tender_title: tender.title,
+    status: missing > 0 ? "Requirements missing" : matched === checks.length ? "Checklist matched" : "Evidence required",
+    score,
+    matched,
+    missing,
+    total: checks.length,
+    checks,
+    eligibility_summary: tender.eligibility_summary || "",
+    message: missing > 0
+      ? "One or more tender document requirements are not matched to the submitted bid."
+      : "This comparison is a review aid; the officer must verify the underlying documents before final eligibility.",
+  };
+}
+

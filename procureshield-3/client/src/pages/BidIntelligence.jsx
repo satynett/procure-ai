@@ -1,14 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-
-const fallbackTender = {
-  eligibility_requirements: [
-    { requirement: "Minimum 3 years experience", type: "experience", mandatory: true },
-    { requirement: "Valid GST registration", type: "tax", mandatory: true },
-    { requirement: "PAN information", type: "identity", mandatory: true },
-  ],
-  required_documents: ["GST certificate", "PAN card", "Experience certificate"],
-};
+import { ArrowLeft, FileCheck2, UploadCloud, AlertTriangle, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function encodeFile(file) {
   return new Promise((resolve, reject) => {
@@ -19,150 +12,322 @@ function encodeFile(file) {
   });
 }
 
+const aliases = {
+  "GST certificate": ["GST certificate"],
+  "PAN card": ["PAN card"],
+  "Udyam/MSME certificate": ["Udyam/MSME certificate"],
+  "Experience certificate": ["Experience certificate"],
+  "Work order": ["Work order"],
+  "Financial statement": ["Financial statement", "Turnover proof"],
+  "Turnover proof": ["Financial statement", "Turnover proof"],
+  "Balance sheet": ["Balance sheet", "Financial statement"],
+  "Certificate of incorporation": ["Certificate of incorporation"],
+  "EMD proof": ["EMD / Bid Security proof", "EMD proof"],
+  "EMD / Bid Security proof": ["EMD / Bid Security proof", "EMD proof"],
+  "ISO 9001": ["ISO certificate", "ISO 9001"],
+  "ISO certificate": ["ISO certificate", "ISO 9001"],
+  "OEM authorization": ["Authorization / OEM certificate", "OEM authorization"],
+  "Authorization / OEM certificate": ["Authorization / OEM certificate", "OEM authorization"],
+  "Quality certificate": ["Quality certificate"],
+};
+
 function Status({ value }) {
-  const cls = value === "pass" ? "bg-emerald-50 text-emerald-700"
-    : value === "missing" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
-  return <span className={"rounded-full px-2 py-1 text-xs font-semibold " + cls}>{value}</span>;
+  const cls = value === "valid" || value === "matched"
+    ? "bg-emerald-50 text-emerald-700"
+    : value === "missing"
+      ? "bg-red-50 text-red-700"
+      : "bg-amber-50 text-amber-700";
+  const label = value === "valid" || value === "matched"
+    ? "✓ Matched"
+    : value === "missing"
+      ? "✕ Missing"
+      : "⚠ Needs review";
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
 }
 
 export default function BidIntelligence() {
-  const [file, setFile] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
-  const [bidder, setBidder] = useState({
-    company_name: "", pan: "", gstin: "", years_experience: "", turnover: "", udyam: "", documents: []
-  });
-  const [eligibility, setEligibility] = useState(null);
+  const navigate = useNavigate();
+  const [tenders, setTenders] = useState([]);
+  const [selectedTenderId, setSelectedTenderId] = useState("");
+  const [files, setFiles] = useState([]);
+  const [checks, setChecks] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [loadingTenders, setLoadingTenders] = useState(true);
   const [error, setError] = useState("");
+  const [governmentCheck, setGovernmentCheck] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiDocChecks, setAiDocChecks] = useState([]);
 
-  const requirements = analysis?.requirements || fallbackTender;
-  const canCheck = useMemo(() => bidder.company_name.trim().length > 0, [bidder.company_name]);
+  useEffect(() => {
+    api.tenders("Open")
+      .then((res) => {
+        const open = res.tenders || [];
+        setTenders(open);
+        if (open.length) setSelectedTenderId(open[0].tender_id);
+      })
+      .catch((e) => setError(e.message || "Unable to load tenders."))
+      .finally(() => setLoadingTenders(false));
+  }, []);
 
-  async function analyzeTender() {
-    if (!file) return;
-    setBusy(true); setError("");
+  const selectedTender = useMemo(
+    () => tenders.find((t) => t.tender_id === selectedTenderId) || null,
+    [tenders, selectedTenderId]
+  );
+
+  async function checkDocuments() {
+    if (!files.length || !selectedTender) return;
+    setBusy(true);
+    setError("");
+    setChecks([]);
+    setGovernmentCheck(null);
+    setAiAnalysis(null);
+    setAiDocChecks([]);
     try {
-      const content_base64 = await encodeFile(file);
-      const result = await api.intelligencePdf({ filename: file.name, content_base64 });
-      setAnalysis(result); setEligibility(null);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+      const results = [];
+      for (const file of files) {
+        const content_base64 = await encodeFile(file);
+        const result = await api.intelligenceValidateDocument({
+          filename: file.name,
+          content_type: file.type || "application/pdf",
+          content_base64
+        });
+        let aiDoc = null;
+        if (result.text) {
+          aiDoc = await api.intelligenceAIDocumentCheck({
+            filename: file.name,
+            document_text: result.text,
+            tender_id: selectedTender.tender_id,
+            requirements: [
+              ...(selectedTender.eligibility_requirements || []),
+              ...(selectedTender.technical_requirements || []),
+              ...(selectedTender.required_documents || []).map((requirement) => ({ requirement, type: "document", mandatory: true }))
+            ]
+          });
+        }
+        results.push({ ...result, filename: file.name, ai: aiDoc });
+      }
+      setChecks(results);
+      setAiDocChecks(results.map(r => r.ai).filter(Boolean));
+      const gov = await api.governmentVerification("BID-2001");
+      setGovernmentCheck(gov);
+
+      // AI interprets the officer-published RFP text. Exact compliance decisions remain in the deterministic verification layer.
+      if (selectedTender?.rfp_text) {
+        const ai = await api.intelligenceAIRequirements(selectedTender.rfp_text);
+        setAiAnalysis(ai);
+      }
+    } catch (e) {
+      setError(e.message || "Document check failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function checkEligibility() {
-    setBusy(true); setError("");
-    try {
-      const result = await api.intelligenceEligibility({
-        tender: requirements,
-        bidder: {
-          ...bidder,
-          years_experience: bidder.years_experience === "" ? null : Number(bidder.years_experience),
-          turnover: bidder.turnover === "" ? null : Number(bidder.turnover),
-        },
-      });
-      setEligibility(result);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
-  }
+  const detected = [...new Set(checks.flatMap((c) => c.detected_documents || []))];
+  const checklist = (selectedTender?.required_documents || []).map((requirement) => {
+    const candidates = aliases[requirement] || [requirement];
+    const matched = candidates.some((candidate) => detected.includes(candidate));
+    return { requirement, matched };
+  });
+  const matched = checklist.filter((x) => x.matched).length;
+  const missing = checklist.length - matched;
+  const valid = checks.filter((c) => c.status === "valid").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">North-Star Prototype</div>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">Bid Intelligence</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Tender document → requirements → bidder self-check. Network risk remains powered by the existing analytics engine.
-        </p>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex items-start gap-3">
+        <button onClick={() => navigate("/bidder")} className="rounded-lg border border-slate-200 bg-white p-2">
+          <ArrowLeft size={17}/>
+        </button>
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Bidder Portal</div>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Check My Documents</h1>
+          <p className="mt-1 text-sm text-slate-500">Select the tender you are preparing for, then check your documents against that tender's published checklist.</p>
+        </div>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">1. Tender / RFP analysis</h2>
-        <p className="mt-1 text-sm text-slate-500">Upload a PDF. Text is extracted locally; scanned documents are flagged for OCR.</p>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <input type="file" accept=".pdf,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="block w-full text-sm" />
-          <button disabled={!file || busy} onClick={analyzeTender} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-            {busy ? "Analyzing..." : "Extract & Analyze"}
-          </button>
-        </div>
-        {analysis && (
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg bg-slate-50 p-4 md:col-span-2">
-              <div className="text-xs font-semibold uppercase text-slate-500">Extracted text</div>
-              <div className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-sm text-slate-700">{analysis.text || "No text extracted."}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 p-4">
-              <div className="font-medium">{analysis.filename}</div>
-              <div className="mt-2 text-sm text-slate-500">{analysis.pages} page(s)</div>
-              <div className="mt-2 text-sm">{analysis.ocr_required ? "⚠ OCR may be required" : "✓ Text extraction available"}</div>
-            </div>
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Checking documents for tender</label>
+        <select
+          value={selectedTenderId}
+          onChange={(e) => { setSelectedTenderId(e.target.value); setChecks([]); }}
+          disabled={loadingTenders}
+          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium"
+        >
+          {loadingTenders ? <option>Loading tenders…</option> : tenders.map((t) => (
+            <option key={t.tender_id} value={t.tender_id}>{t.tender_id} — {t.title}</option>
+          ))}
+        </select>
+        {selectedTender && (
+          <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
+            <div className="font-semibold text-slate-800">{selectedTender.title}</div>
+            <div className="mt-1 text-xs text-slate-500">{selectedTender.department} · Deadline {selectedTender.deadline}</div>
+            <div className="mt-2 text-xs text-slate-600">{selectedTender.eligibility_summary}</div>
           </div>
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">2. Extracted requirements</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {(requirements.eligibility_requirements || []).map((r, i) => (
-            <div key={i} className="rounded-lg border border-slate-200 p-3">
-              <div className="text-sm font-medium text-slate-800">{r.requirement}</div>
-              <div className="mt-1 text-xs text-slate-500">{r.type} · {r.mandatory ? "mandatory" : "detected requirement"}</div>
-            </div>
-          ))}
-          {(requirements.required_documents || []).map((d, i) => (
-            <div key={"d-" + i} className="rounded-lg border border-slate-200 p-3 text-sm">📄 {d}</div>
-          ))}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
+          <div>
+            <h2 className="font-semibold">Tender-specific document check</h2>
+            <p className="mt-1 text-sm text-slate-500">The RFP remains officer-published. You upload only your own supporting documents.</p>
+          </div>
         </div>
-        <p className="mt-4 text-xs text-amber-700">Prototype parser only. No LLM or government verification is claimed.</p>
+
+        <div className="mt-5 rounded-lg border-2 border-dashed border-slate-200 p-8 text-center">
+          <UploadCloud className="mx-auto text-slate-400" size={28}/>
+          <h3 className="mt-2 font-semibold">Upload your documents</h3>
+          <p className="mt-1 text-sm text-slate-500">GST, PAN, Udyam, experience, turnover, ISO, OEM authorization, EMD and other supporting PDFs.</p>
+          <input type="file" multiple accept=".pdf,.doc,.docx" onChange={e=>setFiles(Array.from(e.target.files||[]))} className="mx-auto mt-4 block max-w-md text-sm"/>
+          {files.length > 0 && (
+            <div className="mx-auto mt-3 max-w-lg space-y-1 text-left">
+              {files.map((f,i)=><div key={i} className="rounded bg-slate-50 px-3 py-2 text-sm">📄 {f.name}</div>)}
+            </div>
+          )}
+          <button disabled={!files.length || !selectedTender || busy} onClick={checkDocuments} className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+            {busy ? "Checking…" : "Check Against This Tender"}
+          </button>
+        </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">3. Bidder eligibility pre-check</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {[
-            ["company_name", "Company name"], ["pan", "PAN"], ["gstin", "GSTIN"],
-            ["udyam", "Udyam"], ["years_experience", "Years of experience"], ["turnover", "Turnover"],
-          ].map(([key, label]) => (
-            <label key={key} className="text-sm text-slate-600">{label}
-              <input value={bidder[key]} onChange={e => setBidder({ ...bidder, [key]: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
-            </label>
-          ))}
-        </div>
-        <label className="mt-4 block text-sm text-slate-600">Documents supplied (comma separated)
-          <input value={bidder.documents.join(", ")}
-            onChange={e => setBidder({ ...bidder, documents: e.target.value.split(",").map(x => x.trim()).filter(Boolean) })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-        </label>
-        <button disabled={!canCheck || busy} onClick={checkEligibility}
-          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-          Run self-check
-        </button>
-
-        {eligibility && (
-          <div className="mt-5 rounded-lg border border-slate-200 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><div className="text-xs text-slate-500">Eligibility pre-check</div><div className="text-xl font-bold">{eligibility.eligibility_score}%</div></div>
-              <div className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">{eligibility.status}</div>
+      {checks.length > 0 && (
+        <>
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Your tender checklist</h2>
+                <p className="mt-1 text-sm text-slate-500">Comparison against {selectedTender.tender_id} — {selectedTender.title}</p>
+              </div>
+              <div className="text-sm font-semibold">{matched}/{checklist.length} requirements matched</div>
             </div>
+
             <div className="mt-4 space-y-2">
-              {eligibility.checks.map((c, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
-                  <span className="text-sm">{c.requirement}<span className="ml-2 text-xs text-slate-500">{c.evidence}</span></span>
-                  <Status value={c.status} />
+              {checklist.map((item) => (
+                <div key={item.requirement} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    {item.matched ? <CheckCircle2 size={16} className="text-emerald-600"/> : <XCircle size={16} className="text-red-500"/>}
+                    {item.requirement}
+                  </div>
+                  <Status value={item.matched ? "matched" : "missing"} />
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-xs text-amber-700">{eligibility.message}</p>
-          </div>
-        )}
-      </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">4. Network risk</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          The existing Graph/GNN engine stays isolated. Use Risk Analysis or Bidder Network for network evidence and review-priority scoring.
-        </p>
-      </section>
+            {missing > 0 && (
+              <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                <AlertTriangle size={15}/>
+                {missing} tender requirement{missing !== 1 ? "s" : ""} still need matching documents before you submit.
+              </div>
+            )}
+          </section>
+
+          {aiAnalysis && (
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-violet-50 p-2 text-violet-600"><Sparkles size={20}/></div>
+                  <div><h2 className="font-semibold">AI RFP Understanding</h2><p className="mt-1 text-sm text-slate-500">AI interprets the officer-published RFP; exact compliance remains rule-based.</p></div>
+                </div>
+                <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">{aiAnalysis.enabled ? ("AI · " + (aiAnalysis.model || "OpenRouter")) : "NOT CONFIGURED"}</span>
+              </div>
+              {!aiAnalysis.enabled && <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{aiAnalysis.message}</div>}
+              {aiAnalysis.error && <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">AI analysis failed: {aiAnalysis.error}. Existing deterministic parsing remains available.</div>}
+              {aiAnalysis.enabled && !aiAnalysis.error && <div className="mt-4 space-y-4">
+                {aiAnalysis.summary && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{aiAnalysis.summary}</p>}
+                {(aiAnalysis.eligibility_requirements || []).length > 0 && <div><div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">AI-extracted eligibility</div><div className="space-y-2">{aiAnalysis.eligibility_requirements.slice(0, 8).map((item, i) => <div key={i} className="rounded-lg border border-slate-100 bg-slate-50 p-3"><div className="text-sm font-medium text-slate-800">{item.requirement}</div><div className="mt-1 text-xs text-slate-500">{item.type || "requirement"}{item.minimum_value != null ? " · Minimum " + item.minimum_value + (item.unit ? " " + item.unit : "") : ""}{item.period ? " · " + item.period : ""}</div></div>)}</div></div>}
+                {(aiAnalysis.technical_requirements || []).length > 0 && <div><div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">AI-extracted technical requirements</div><div className="space-y-2">{aiAnalysis.technical_requirements.slice(0, 6).map((item, i) => <div key={i} className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">{item.requirement}</div>)}</div></div>}
+                {(aiAnalysis.uncertainties || []).length > 0 && <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800"><strong>AI uncertainties:</strong> {aiAnalysis.uncertainties.join(" · ")}</div>}
+              </div>}
+            </section>
+          )}
+              {aiDocChecks.length > 0 && (
+            <section className="rounded-xl border border-violet-200 bg-violet-50/40 p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2"><Sparkles size={18} className="text-violet-600"/><h2 className="font-semibold text-slate-900">AI Evidence Verification</h2></div>
+                  <p className="mt-1 text-sm text-slate-600">AI compares extracted bidder-document evidence with the officer-published requirements. It does not override deterministic compliance or officer decisions.</p>
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-violet-700">{aiDocChecks.filter(x=>x.enabled).length} AI analyses</span>
+              </div>
+              <div className="mt-4 space-y-4">
+                {aiDocChecks.map((doc,i)=>(
+                  <div key={i} className="rounded-lg border border-violet-100 bg-white p-4">
+                    <div className="flex items-center justify-between gap-3"><div className="text-sm font-semibold text-slate-800">{doc.document}</div><span className="text-xs text-slate-500">{doc.model || "AI"} · advisory</span></div>
+                    {doc.error && <div className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-800">AI unavailable for this document: {doc.error}. Deterministic checks remain active.</div>}
+                    {doc.enabled && !doc.error && <>
+                      <p className="mt-2 text-sm text-slate-600">{doc.summary || "AI evidence comparison completed."}</p>
+                      <div className="mt-3 space-y-2">
+                        {(doc.checks || []).map((item,j)=>(
+                          <div key={j} className="rounded-lg border border-slate-100 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="text-sm font-medium text-slate-800">{item.requirement}</div>
+                              <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${item.status==="matched"?"bg-emerald-50 text-emerald-700":item.status==="mismatch"?"bg-red-50 text-red-700":item.status==="missing"?"bg-slate-100 text-slate-600":"bg-amber-50 text-amber-700"}`}>{item.status.replace("_"," ")} · {item.confidence}%</span>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">{item.explanation}</div>
+                            {item.evidence && <div className="mt-2 rounded bg-slate-50 p-2 text-[11px] text-slate-600"><strong>Evidence:</strong> {item.evidence}</div>}
+                          </div>
+                        ))}
+                      </div>
+                      {(doc.uncertainties || []).length > 0 && <div className="mt-3 rounded bg-amber-50 p-2 text-xs text-amber-800"><strong>Review flags:</strong> {doc.uncertainties.join(" · ")}</div>}
+                    </>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+          {governmentCheck && (
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Government Verification Sandbox</h2>
+                  <p className="mt-1 text-sm text-slate-500">Synthetic API-compatible checks for prototype validation. No live government systems are queried.</p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">SANDBOX</span>
+              </div>
+              <div className="mt-4 grid gap-2 md:grid-cols-2">
+                {governmentCheck.checks.map((check) => (
+                  <div key={check.source} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-semibold text-slate-800">{check.check}</div>
+                      <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${check.status === "Clear" || check.status === "Verified" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                        {check.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">{check.source} · {check.verification_id}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Document validation results</h2>
+                <p className="mt-1 text-sm text-slate-500">Each uploaded file is inspected before the tender checklist is matched.</p>
+              </div>
+              <div className="text-sm font-semibold">{valid}/{checks.length} files readable</div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {checks.map((doc,i) => (
+                <div key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <div>
+                    <div className="text-sm font-medium">{doc.filename}</div>
+                    <div className="mt-1 text-xs text-slate-500">{doc.detected_documents?.join(", ") || doc.message || "Document inspected."}</div>
+                  </div>
+                  <Status value={doc.status}/>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">Sandbox prototype. This is a pre-bid matching aid; official eligibility still requires procurement-officer verification.</div>
     </div>
   );
 }

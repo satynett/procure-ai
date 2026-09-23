@@ -24,6 +24,9 @@ import {
   egoNetwork,
   engineUrl,
   intelligencePdf,
+  intelligenceValidateDocument,
+  intelligenceRequirements,
+  intelligenceEligibility,
   invalidateCache,
   status as engineStatus,
   tenderDetail,
@@ -37,10 +40,13 @@ import {
   signalLabel,
 } from "./utils/engineMapping.js";
 import { registryEvidenceFor } from "./utils/registrySignals.js";
-import { buildChecklist } from "./utils/checklist.js";
+import { buildChecklist, buildTenderComparison } from "./utils/checklist.js";
 import { toCsv } from "./utils/csv.js";
 import { requireAuth, DEMO_TOKEN } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
+import { initDatabase, getCollection, replaceCollection } from "./db/store.js";
+import { verifyBidderById } from "./sandbox/governmentVerification.js";
+import { analyzeRfpWithAI, analyzeBidderDocumentWithAI } from "./utils/aiClient.js";
 
 dotenv.config();
 
@@ -50,38 +56,60 @@ const DATA_DIR = path.join(__dirname, "data");
 const app = express();
 app.set("trust proxy", true);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(requireAuth);
 
 const VALID_VERIFICATION_STATUSES = ["Verified", "Needs Review", "Rejected"];
 const MAX_COMMENT_LENGTH = 1000;
 
 // ---------------------------------------------------------------------
-// Data access helpers (JSON-file "database" for the prototype)
+// PostgreSQL-backed data access.
+// The route layer keeps the existing array-shaped API contract so the
+// React UI and Python risk engine do not need to change during migration.
 // ---------------------------------------------------------------------
+const COLLECTION_BY_FILE = {
+  "bidders.json": "bidders",
+  "bids.json": "bids",
+  "tenders.json": "tenders",
+  "auditLog.json": "auditLog",
+};
+
 function readJson(file) {
-  return JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf-8"));
+  const collection = COLLECTION_BY_FILE[file];
+  return collection ? getCollection(collection) : [];
 }
-function writeJson(file, data) {
-  fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
+async function writeJson(file, data) {
+  const collection = COLLECTION_BY_FILE[file];
+  if (!collection) throw new Error("Unknown data collection: " + file);
+  await replaceCollection(collection, data);
 }
-function getBidders() {
-  return readJson("bidders.json");
+function getBidders() { return readJson("bidders.json"); }
+function getBids() { return readJson("bids.json"); }
+function getTenders() { return readJson("tenders.json"); }
+
+function decorateTender(tender, bids, bidders) {
+  const tenderBids = bids.filter((b) => b.tender_id === tender.tender_id);
+  const winnerBid = tender.status === "Awarded" && tenderBids.length
+    ? (tender.winner_bid_id ? tenderBids.find((b) => b.bid_id === tender.winner_bid_id) || null
+      : tenderBids.slice().sort((a, b) => Number(a.bid_amount || Infinity) - Number(b.bid_amount || Infinity))[0])
+    : null;
+  const winner = winnerBid ? bidders.find((b) => b.bidder_id === winnerBid.bidder_id) : null;
+  return {
+    ...tender,
+    bid_count: tenderBids.length,
+    winner_name: winner?.company_name || null,
+    winner_bid_id: winnerBid?.bid_id || null,
+    award_amount: winnerBid?.bid_amount || null,
+  };
 }
-function getBids() {
-  return readJson("bids.json");
-}
+
 function getAuditLog() {
-  try {
-    return readJson("auditLog.json");
-  } catch {
-    return [];
-  }
+  return readJson("auditLog.json");
 }
-function appendAuditLog(entry) {
+async function appendAuditLog(entry) {
   const log = getAuditLog();
   log.unshift(entry);
-  writeJson("auditLog.json", log);
+  await writeJson("auditLog.json", log);
   return log;
 }
 
@@ -114,7 +142,7 @@ function decorateBid(bid, bidders, view) {
   const risk = view.riskMap[bid.bidder_id] || { score: 0, category: "Low" };
   return {
     ...bid,
-    bidder_name: bidder ? bidder.company_name : "Unknown",
+    bidder_name: bid.bidder_company_name || (bidder ? bidder.company_name : "Unknown"),
     msme_status: bidder ? bidder.msme_status : "Unknown",
     // The engine scores companies, not individual bids: a bid inherits the
     // risk of the bidder that submitted it. Any stored `risk_score` in
@@ -145,6 +173,26 @@ app.post("/api/auth/login", rateLimit({ windowMs: 60_000, max: 10 }), (req, res)
 // ---------------------------------------------------------------------
 // Engine control surface
 // ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Government Verification Sandbox
+// Synthetic API-compatible checks; no live government systems are called.
+// ---------------------------------------------------------------------
+app.get("/api/gov/verify/:bidderId", asyncRoute(async (req, res) => {
+  const bidderId = decodeURIComponent(req.params.bidderId);
+  const result = await verifyBidderById(getBidders(), bidderId);
+  if (!result) return res.status(404).json({ message: "Bidder not found" });
+  res.json(result);
+}));
+
+app.get("/api/gov/gstn/verify/:gstin", asyncRoute(async (req, res) => {
+  const bidders = getBidders();
+  const bidder = bidders.find((b) => String(b.gst_number || "").toUpperCase() === String(req.params.gstin || "").toUpperCase());
+  if (!bidder) return res.status(404).json({ source: "GSTN_SANDBOX", status: "Not Found" });
+  const verification = await verifyBidderById(bidders, bidder.bidder_id);
+  res.json(verification.checks.find((x) => x.source === "GSTN_SANDBOX"));
+}));
+
 app.get("/api/engine/status", asyncRoute(async (req, res) => {
   res.json(await engineStatus());
 }));
@@ -227,6 +275,222 @@ app.get("/api/dashboard", asyncRoute(async (req, res) => {
     signalTrend,
     disclaimer: view.disclaimer,
   });
+}));
+
+
+// ---------------------------------------------------------------------
+// Shared tender lifecycle for bidder + officer portals
+// ---------------------------------------------------------------------
+app.get("/api/tenders", asyncRoute(async (req, res) => {
+  const bidders = getBidders();
+  const bids = getBids();
+  const tenders = getTenders().map((t) => decorateTender(t, bids, bidders));
+  const status = req.query.status;
+  const filtered = status ? tenders.filter((t) => t.status.toLowerCase() === String(status).toLowerCase()) : tenders;
+  res.json({
+    tenders: filtered,
+    counts: {
+      open: tenders.filter((t) => t.status === "Open").length,
+      awarded: tenders.filter((t) => t.status === "Awarded").length,
+    },
+    disclaimer: "Demo tender lifecycle; data is synthetic sandbox data."
+  });
+}));
+
+app.get("/api/tenders/:id", asyncRoute(async (req, res) => {
+  const bidders = getBidders();
+  const bids = getBids();
+  const tenderId = decodeURIComponent(req.params.id);
+  const tender = getTenders().find((t) => t.tender_id === tenderId);
+  if (!tender) return res.status(404).json({ message: "Tender not found" });
+  res.json({ tender: decorateTender(tender, bids, bidders) });
+}));
+function tenderManagementPayload(tender, bids, bidders, view = null) {
+  const tenderBids = bids.filter((b) => b.tender_id === tender.tender_id).map((bid) => {
+    const bidder = bidders.find((x) => x.bidder_id === bid.bidder_id);
+    const risk = view?.riskMap?.[bid.bidder_id] || {};
+    const decorated = decorateBid(bid, bidders, view || { riskMap: {} });
+    return {
+      ...decorated,
+      bidder_email: bidder?.email || "—", bidder_phone: bidder?.phone || "—",
+      gst_number: bidder?.gst_number || "—", pan_number: bidder?.pan_number || "—",
+      udyam_status: bidder?.msme_status || "—", bidder_address: bidder?.address || "—",
+      quoted_amount: Number(bid.bid_amount || 0),
+      government_estimated_value: Number(tender.estimated_value || 0),
+      award_amount: tender.winner_bid_id === bid.bid_id ? (tender.award_amount || bid.bid_amount) : null,
+      finalComparison: buildTenderComparison({ tender, bidder, bid }),
+    };
+  });
+  return {
+    tender: { ...decorateTender(tender,bids,bidders), lifecycle:tender.status, award_amount:tender.award_amount||null,
+      winner_bid_id:tender.winner_bid_id||null, rfp_text:tender.rfp_text||"", rfp_content_base64:tender.rfp_content_base64||null,
+      eligibility_requirements:tender.eligibility_requirements||[], technical_requirements:tender.technical_requirements||[], important_dates:tender.important_dates||[] },
+    bids:tenderBids,
+    stats:{
+      total_bids:tenderBids.length, verified:tenderBids.filter(b=>b.verification_status==="Verified").length,
+      needs_review:tenderBids.filter(b=>b.verification_status==="Needs Review").length, rejected:tenderBids.filter(b=>b.verification_status==="Rejected").length,
+      lowest_quote:tenderBids.length?Math.min(...tenderBids.map(b=>b.quoted_amount||Infinity)):null,
+      highest_quote:tenderBids.length?Math.max(...tenderBids.map(b=>b.quoted_amount||0)):null
+    }
+  };
+}
+
+app.get("/api/officer/tenders/:id", asyncRoute(async (req,res)=>{
+  const tenderId=decodeURIComponent(req.params.id); const tender=getTenders().find(t=>t.tender_id===tenderId);
+  if(!tender) return res.status(404).json({message:"Tender not found"});
+  const bidders=getBidders(); const bids=getBids(); let view=null;
+  try { view=await getAnalysis(); } catch { view={riskMap:{}}; }
+  res.json(tenderManagementPayload(tender,bids,bidders,view));
+}));
+
+app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
+  const {title,department,category,deadline,estimated_value,publish=false,rfp_filename,rfp_content_base64}=req.body||{};
+  if(!title||!department||!deadline||!rfp_content_base64) return res.status(400).json({message:"Title, department, deadline and an RFP PDF are required."});
+  const rfp=await intelligencePdf({filename:rfp_filename||"tender-rfp.pdf",content_base64:rfp_content_base64,content_type:"application/pdf"});
+  if(rfp.extraction_status!=="success") return res.status(400).json({message:rfp.message||"RFP could not be read."});
+  const parsed=rfp.requirements||{};
+  // AI interprets the extracted RFP text; deterministic parsing remains the source for compliance fields.
+  let aiAnalysis=null;
+  try { aiAnalysis=await analyzeRfpWithAI(rfp.text||""); } catch (error) {
+    aiAnalysis={enabled:true,provider:"openrouter",model:process.env.OPENROUTER_MODEL||"openrouter/free",error:error.message,fallback_recommended:true};
+  }
+  const summary=[...(parsed.eligibility_requirements||[]),...(parsed.technical_requirements||[])].map(x=>x.requirement).filter(Boolean).slice(0,8).join(", ")||"Officer review required before publication.";
+  const tenders=getTenders(); const year=new Date().getFullYear(); const sequence=String(tenders.length+1).padStart(4,"0");
+  const tender={tender_id:`GEM/${year}/T/${sequence}`,title:String(title).trim(),department:String(department).trim(),category:String(category||"General Procurement").trim(),
+    status:publish?"Open":"Draft",deadline:String(deadline),estimated_value:Number(estimated_value||0),rfp_filename:rfp_filename||"tender-rfp.pdf",
+    rfp_content_base64,rfp_text:rfp.text||"",eligibility_summary:summary,eligibility_requirements:parsed.eligibility_requirements||[],
+    technical_requirements:parsed.technical_requirements||[],required_documents:parsed.required_documents||[],important_dates:parsed.important_dates||[],
+    ai_analysis:aiAnalysis?.enabled ? aiAnalysis : null,
+    ai_provider:aiAnalysis.provider||null,ai_model:aiAnalysis.model||null,
+    parser:parsed.parser||"deterministic-prototype",created_at:new Date().toISOString(),published_at:publish?new Date().toISOString():null};
+  tenders.unshift(tender); await writeJson("tenders.json",tenders);
+  await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:publish?"Tender Published":"Tender Created as Draft",tender_id:tender.tender_id,timestamp:new Date().toISOString(),rfp_filename:tender.rfp_filename});
+  res.status(201).json({tender:decorateTender(tender,getBids(),getBidders())});
+}));
+
+app.patch("/api/officer/tenders/:id",asyncRoute(async (req,res)=>{
+  const tenderId=decodeURIComponent(req.params.id); const tenders=getTenders(); const idx=tenders.findIndex(t=>t.tender_id===tenderId);
+  if(idx===-1) return res.status(404).json({message:"Tender not found"}); const tender={...tenders[idx]}; const action=req.body?.action;
+  if(!["publish","close","withdraw","award"].includes(action)) return res.status(400).json({message:"Unknown tender action."});
+  if(action==="publish"){if(!tender.rfp_content_base64)return res.status(400).json({message:"An RFP must be uploaded before publishing."});tender.status="Open";tender.published_at=new Date().toISOString();}
+  if(action==="close"){tender.status="Closed";tender.closing_date=new Date().toISOString().slice(0,10);}
+  if(action==="withdraw"){if(["Awarded","Closed"].includes(tender.status))return res.status(400).json({message:"Closed or awarded tenders cannot be withdrawn."});tender.status="Withdrawn";}
+  if(action==="award"){const bid=getBids().find(b=>b.bid_id===req.body?.bid_id&&b.tender_id===tenderId);if(!bid)return res.status(400).json({message:"Select a valid bid for this tender."});
+    tender.status="Awarded";tender.closing_date=tender.closing_date||new Date().toISOString().slice(0,10);tender.award_date=new Date().toISOString().slice(0,10);tender.winner_bid_id=bid.bid_id;tender.award_amount=Number(req.body?.award_amount||bid.bid_amount||0);}
+  tenders[idx]=tender;await writeJson("tenders.json",tenders);
+  await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:`Tender ${action}`,tender_id:tenderId,bid_id:req.body?.bid_id||null,timestamp:new Date().toISOString(),award_amount:tender.award_amount||null});
+  res.json({tender:decorateTender(tender,getBids(),getBidders())});
+}));
+
+app.delete("/api/officer/tenders/:id",asyncRoute(async (req,res)=>{
+  const tenderId=decodeURIComponent(req.params.id);const tenders=getTenders();const idx=tenders.findIndex(t=>t.tender_id===tenderId);
+  if(idx===-1)return res.status(404).json({message:"Tender not found"});if(!["Draft","Withdrawn"].includes(tenders[idx].status))return res.status(400).json({message:"Only draft or withdrawn tenders can be permanently removed. Use withdraw for an active tender."});
+  tenders.splice(idx,1);await writeJson("tenders.json",tenders);await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:"Tender Permanently Removed",tender_id:tenderId,timestamp:new Date().toISOString()});
+  res.json({success:true,removed:tenderId});
+}));
+
+
+app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
+  const {
+    tender_id,
+    company_name,
+    documents = [],
+    bid_amount = null,
+    bidder_id = "BID-2001",
+  } = req.body || {};
+
+  const tender = getTenders().find((t) => t.tender_id === tender_id);
+
+  if (!tender || tender.status !== "Open") {
+    return res.status(400).json({
+      message: "This tender is not open for bidding.",
+    });
+  }
+
+  if (!company_name?.trim()) {
+    return res.status(400).json({
+      message: "Company name is required.",
+    });
+  }
+
+  const bidders = getBidders();
+  const bidder = bidders.find(
+    (b) => String(b.bidder_id) === String(bidder_id)
+  );
+
+  if (!bidder) {
+    return res.status(400).json({
+      message: "Bidder profile not found.",
+      bidder_id,
+    });
+  }
+
+  const bids = getBids();
+
+  // Generate the next GEM-style bid ID from existing PostgreSQL bids.
+  const maxBidNumber = bids.reduce((max, b) => {
+    const match = String(b.bid_id || "").match(/^GEM\/\d{4}\/B\/(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+
+  const nextBidNumber = maxBidNumber + 1;
+  const year = new Date().getFullYear();
+
+  const bid = {
+    bid_id: `GEM/${year}/B/${String(nextBidNumber).padStart(4, "0")}`,
+    tender_id,
+    bidder_id: bidder.bidder_id,
+    bidder_company_name: company_name.trim(),
+    category: tender.category,
+    bid_amount: bid_amount ? Number(bid_amount) : null,
+    submission_date: new Date().toISOString().slice(0, 10),
+    verification_status: "Needs Review",
+    submitted_documents: documents
+      .map((d) => (typeof d === "string" ? d : d.name))
+      .filter(Boolean),
+  };
+
+  bids.push(bid);
+  await writeJson("bids.json", bids);
+
+  res.status(201).json({
+    success: true,
+    bid,
+  });
+}));
+
+// ---------------------------------------------------------------------
+// Bidder bid history
+// ---------------------------------------------------------------------
+app.get("/api/bidder/bids", asyncRoute(async (req, res) => {
+  const bidderId = String(req.query.bidder_id || "BID-2001");
+  const bidders = getBidders();
+  const view = await getAnalysis();
+  const tenders = getTenders();
+  const bids = getBids()
+    .filter((b) => b.bidder_id === bidderId)
+    .map((b) => {
+      const tender = tenders.find((t) => t.tender_id === b.tender_id);
+      return {
+        ...decorateBid(b, bidders, view),
+        tender_title: tender?.title || b.tender_id,
+        tender_status: tender?.status || "Unknown",
+        tender_deadline: tender?.deadline || tender?.closing_date || null,
+        award_date: tender?.award_date || null,
+        winner_name: tender?.status === "Awarded"
+          ? decorateTender(tender, getBids(), bidders).winner_name
+          : null,
+      };
+    })
+    .sort((a, b) => {
+      const dateA = String(a.submitted_at || a.submission_date || "");
+      const dateB = String(b.submitted_at || b.submission_date || "");
+      const byDate = dateB.localeCompare(dateA);
+      if (byDate !== 0) return byDate;
+      return String(b.bid_id || "").localeCompare(String(a.bid_id || ""), undefined, { numeric: true });
+    });
+
+  res.json({ count: bids.length, bids });
 }));
 
 // ---------------------------------------------------------------------
@@ -331,8 +595,17 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
   const bid = getBids().find((b) => b.bid_id === bidId);
   if (!bid) return res.status(404).json({ message: "Bid not found" });
 
-  const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
-  const view = await getAnalysis();
+const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
+
+if (!bidder) {
+  return res.status(404).json({
+    message: "Bidder profile not found for this bid.",
+    bid_id: bid.bid_id,
+    bidder_id: bid.bidder_id,
+  });
+}
+
+const view = await getAnalysis();
   const risk = view.riskMap[bid.bidder_id] || {
     score: 0,
     category: "Low",
@@ -352,17 +625,24 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
     ])
   );
 
-  // Tender-level context comes from the engine too, when it knows the tender.
-  let tender = null;
-  try {
-    tender = await tenderDetail(bid.tender_id);
-  } catch (err) {
-    // Tender context is supplementary: the bid view still works without it.
-    // Log rather than swallow, so a broken lookup is visible in the server
-    // output instead of silently rendering an empty panel.
-    console.warn(`Tender lookup failed for ${bid.tender_id}: ${err.message}`);
-    tender = null;
+  // The shared tender catalog is the compliance source of truth for both portals.
+  const publishedTender = getTenders().find((t) => t.tender_id === bid.tender_id) || null;
+
+  let tender = publishedTender;
+  if (!tender) {
+    try {
+      tender = await tenderDetail(bid.tender_id);
+    } catch (err) {
+      console.warn("Tender lookup failed for " + bid.tender_id + ": " + err.message);
+      tender = null;
+    }
   }
+
+  const finalComparison = buildTenderComparison({
+    tender: publishedTender || tender,
+    bidder,
+    bid,
+  });
 
   res.json({
     bid: decorateBid(bid, bidders, view),
@@ -378,6 +658,7 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
       requires_human_investigation: true,
     },
     tender,
+    finalComparison,
     relatedEdges: bidderEdges.map((e) => {
       const otherId = e.source === bidder.bidder_id ? e.target : e.source;
       const other = bidders.find((x) => x.bidder_id === otherId);
@@ -597,7 +878,7 @@ async function applyVerificationAction(bidId, newStatus, action, comment, res) {
 
   const previousStatus = bids[idx].verification_status;
   bids[idx].verification_status = newStatus;
-  writeJson("bids.json", bids);
+  await writeJson("bids.json", bids);
 
   const entry = {
     id: `AUD-${Date.now()}`,
@@ -609,7 +890,7 @@ async function applyVerificationAction(bidId, newStatus, action, comment, res) {
     new_status: newStatus,
     comment: comment || "",
   };
-  const log = appendAuditLog(entry);
+  const log = await appendAuditLog(entry);
 
   // Verification status is an officer decision, not an engine input, so the
   // cached analysis stays valid and no re-run is triggered here.
@@ -648,6 +929,23 @@ app.get("/api/audit-log", (req, res) => {
 // ---------------------------------------------------------------------
 app.post("/api/intelligence/pdf", asyncRoute(async (req, res) => {
   res.json(await intelligencePdf(req.body));
+}));
+
+app.post("/api/intelligence/requirements", asyncRoute(async (req, res) => {
+  res.json(await intelligenceRequirements(req.body));
+}));
+
+app.post("/api/intelligence/ai-requirements", asyncRoute(async (req, res) => {
+  const result = await analyzeRfpWithAI(req.body?.text || "");
+  res.json(result);
+}));
+
+app.post("/api/intelligence/validate-document", asyncRoute(async (req, res) => {
+  res.json(await intelligenceValidateDocument(req.body));
+}));
+
+app.post("/api/intelligence/eligibility", asyncRoute(async (req, res) => {
+  res.json(await intelligenceEligibility(req.body));
 }));
 
 app.post("/api/ai/analyze", asyncRoute(async (req, res) => {
@@ -843,6 +1141,31 @@ app.get("/api/health", asyncRoute(async (req, res) => {
   res.json({ status: "ok", demo: true, engine });
 }));
 
+app.post("/api/intelligence/ai-document-check", asyncRoute(async (req, res) => {
+  const { filename, document_text, requirements = [], tender_id = null } = req.body || {};
+  if (!document_text) return res.status(400).json({ message: "document_text is required." });
+  const result = await analyzeBidderDocumentWithAI({ filename, documentText: document_text, requirements });
+  await appendAuditLog({
+    id: `AUD-${Date.now()}`,
+    officer: "Procurement Officer 01",
+    action: "AI Bidder Document Analysis",
+    tender_id,
+    timestamp: new Date().toISOString(),
+    ai_provider: result.provider || "openrouter",
+    ai_model: result.model || process.env.OPENROUTER_MODEL || "openrouter/free",
+    document: filename || "bidder-document",
+    result_counts: {
+      matched: (result.checks || []).filter((x) => x.status === "matched").length,
+      mismatch: (result.checks || []).filter((x) => x.status === "mismatch").length,
+      missing: (result.checks || []).filter((x) => x.status === "missing").length,
+      needs_review: (result.checks || []).filter((x) => x.status === "needs_review").length,
+    },
+    advisory: true,
+    comment: "AI interpretation only; deterministic compliance and officer review remain final."
+  });
+  res.json(result);
+}));
+
 app.use("/api", (req, res) => {
   res.status(404).json({ message: `No route for ${req.method} ${req.originalUrl}` });
 });
@@ -866,10 +1189,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
+const DB_SEED = String(process.env.DATABASE_SEED || "true").toLowerCase() !== "false";
 
 export { app };
 
 if (process.env.NODE_ENV !== "test") {
+  await initDatabase({ seed: DB_SEED });
   app.listen(PORT, () => {
     console.log(`ProcureShield BFF (SANDBOX/DEMO DATA) on http://localhost:${PORT}`);
     console.log(`Analytics engine: ${engineUrl()}`);

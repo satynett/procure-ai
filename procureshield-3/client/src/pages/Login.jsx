@@ -19,7 +19,7 @@ export default function Login() {
     try {
       const res = await api.login(username, password);
       login(res.officer, res.token);
-      navigate("/app/dashboard");
+      navigate("/app/officer");
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {

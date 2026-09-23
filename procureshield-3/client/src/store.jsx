@@ -5,9 +5,15 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [officer, setOfficer] = useState(() => {
     const saved = sessionStorage.getItem("ps_officer");
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      sessionStorage.removeItem("ps_officer");
+      sessionStorage.removeItem("ps_token");
+      return null;
+    }
   });
-
   useEffect(() => {
     if (officer) sessionStorage.setItem("ps_officer", JSON.stringify(officer));
     else sessionStorage.removeItem("ps_officer");

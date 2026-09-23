@@ -39,6 +39,15 @@ export const api = {
   login: (username, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }),
   dashboard: () => request("/dashboard"),
+  tenders: (status = "") => request(`/tenders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+  tenderDetail: (tenderId) => request(`/tenders/${encodeURIComponent(tenderId)}`),
+  officerTenderDetail: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`),
+  createTender: (payload) => request("/officer/tenders", { method: "POST", body: JSON.stringify(payload) }),
+  updateTender: (tenderId, payload) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteTender: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "DELETE" }),
+  submitBid: (payload) => request("/bidder/bids", { method: "POST", body: JSON.stringify(payload) }),
+  bidderBids: () => request("/bidder/bids"),
+  governmentVerification: (bidderId) => request(`/gov/verify/${encodeURIComponent(bidderId)}`),
   bids: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     return request(`/bids?${qs.toString()}`);
@@ -73,5 +82,7 @@ export const api = {
   intelligencePdf: (payload) => request("/intelligence/pdf", { method: "POST", body: JSON.stringify(payload) }),
   intelligenceRequirements: (text) => request("/intelligence/requirements", { method: "POST", body: JSON.stringify({ text }) }),
   intelligenceValidateDocument: (payload) => request("/intelligence/validate-document", { method: "POST", body: JSON.stringify(payload) }),
+  intelligenceAIRequirements: (text) => request("/intelligence/ai-requirements", { method: "POST", body: JSON.stringify({ text }) }),
+  intelligenceAIDocumentCheck: (payload) => request("/intelligence/ai-document-check", { method: "POST", body: JSON.stringify(payload) }),
   intelligenceEligibility: (payload) => request("/intelligence/eligibility", { method: "POST", body: JSON.stringify(payload) }),
 };
