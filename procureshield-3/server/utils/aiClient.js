@@ -52,7 +52,7 @@ function extractJson(content) {
   try {
     return JSON.parse(text);
   } catch {}
-  const fenced = text.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\\s*\`\`\`/i);
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (fenced) {
     try { return JSON.parse(fenced[1]); } catch {}
   }
