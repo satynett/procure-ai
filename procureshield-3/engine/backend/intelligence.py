@@ -40,6 +40,9 @@ def extract_pdf(data: bytes, filename: str) -> Dict[str, Any]:
 def extract_requirements(text: str) -> Dict[str, Any]:
     """Extract common procurement requirements using a deterministic parser."""
     source = text or ""
+    # PyMuPDF can extract the rupee symbol as an OCR-like "I" before digits (e.g. I50, I2).
+    # Normalize that artifact so numeric requirements remain extractable.
+    source = re.sub(r"(?<![A-Za-z])I(?=\d)", "", source)
     lowered = source.lower()
     requirements: List[Dict[str, Any]] = []
 
