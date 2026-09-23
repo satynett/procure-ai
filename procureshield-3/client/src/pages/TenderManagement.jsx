@@ -162,6 +162,7 @@ function Overview({t,data,bids,onBidders}) {
 }
 
 function RfpTab({t,onView}) {
+ const [aiExpanded,setAiExpanded]=useState(false);
  const ai=t.ai_analysis;
  return <div className="space-y-5">
    <div className="grid gap-5 lg:grid-cols-2">
