@@ -111,8 +111,29 @@ export default function BidIntelligence() {
           {(requirements.required_documents || []).map((d, i) => (
             <div key={"d-" + i} className="rounded-lg border border-slate-200 p-3 text-sm">📄 {d}</div>
           ))}
+          {(requirements.technical_requirements || []).map((r, i) => (
+            <div key={"t-" + i} className="rounded-lg border border-slate-200 p-3">
+              <div className="text-sm font-medium text-slate-800">{r.requirement}</div>
+              <div className="mt-1 text-xs text-slate-500">{r.type} · {r.mandatory ? "mandatory" : "detected requirement"}</div>
+            </div>
+          ))}
         </div>
-        <p className="mt-4 text-xs text-amber-700">Prototype parser only. No LLM or government verification is claimed.</p>
+        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Compliance checklist</div>
+          <div className="mt-3 space-y-2">
+            {[
+              ...(requirements.eligibility_requirements || []),
+              ...(requirements.technical_requirements || []),
+              ...(requirements.required_documents || []).map(document => ({ requirement: "Document: " + document, type: "document" })),
+            ].map((item, i) => (
+              <div key={"c-" + i} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                <span className="text-sm text-slate-700">{item.requirement}</span>
+                <span className="text-xs font-semibold text-amber-700">Pending bidder check</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="mt-4 text-xs text-amber-700">Prototype extraction is deterministic and explainable; human review is required before procurement decisions.</p>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
