@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, CheckCircle2, AlertTriangle, XCircle, Sparkles, Info,
-  ShieldQuestion, Loader2, ChevronRight, Share2, CheckCircle2, XCircle, ClipboardCheck,
+  ShieldQuestion, Loader2, ChevronRight, Share2, ClipboardCheck,
 } from "lucide-react";
 import { api } from "../api.js";
 import { RiskBadge, StatusBadge } from "../components/Badges.jsx";
