@@ -79,7 +79,8 @@ export default function BidIntelligence() {
     setError("");
     setChecks([]);
     setGovernmentCheck(null);
-    setAiAnalysis(null);\n    setAiDocChecks([]);
+    setAiAnalysis(null);
+    setAiDocChecks([]);
     try {
       const results = [];
       for (const file of files) {
@@ -104,7 +105,8 @@ export default function BidIntelligence() {
         }
         results.push({ ...result, filename: file.name, ai: aiDoc });
       }
-      setChecks(results);\n      setAiDocChecks(results.map(r => r.ai).filter(Boolean));
+      setChecks(results);
+      setAiDocChecks(results.map(r => r.ai).filter(Boolean));
       const gov = await api.governmentVerification("BID-2001");
       setGovernmentCheck(gov);
 
@@ -275,7 +277,8 @@ export default function BidIntelligence() {
                 ))}
               </div>
             </section>
-          )}\n          {governmentCheck && (
+          )}
+          {governmentCheck && (
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
