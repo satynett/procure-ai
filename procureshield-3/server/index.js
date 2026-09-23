@@ -24,6 +24,9 @@ import {
   egoNetwork,
   engineUrl,
   intelligencePdf,
+  intelligenceValidateDocument,
+  intelligenceRequirements,
+  intelligenceEligibility,
   invalidateCache,
   status as engineStatus,
   tenderDetail,
@@ -648,6 +651,18 @@ app.get("/api/audit-log", (req, res) => {
 // ---------------------------------------------------------------------
 app.post("/api/intelligence/pdf", asyncRoute(async (req, res) => {
   res.json(await intelligencePdf(req.body));
+}));
+
+app.post("/api/intelligence/requirements", asyncRoute(async (req, res) => {
+  res.json(await intelligenceRequirements(req.body));
+}));
+
+app.post("/api/intelligence/validate-document", asyncRoute(async (req, res) => {
+  res.json(await intelligenceValidateDocument(req.body));
+}));
+
+app.post("/api/intelligence/eligibility", asyncRoute(async (req, res) => {
+  res.json(await intelligenceEligibility(req.body));
 }));
 
 app.post("/api/ai/analyze", asyncRoute(async (req, res) => {
