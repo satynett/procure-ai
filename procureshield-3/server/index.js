@@ -386,6 +386,34 @@ app.post("/api/bidder/bids", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------
+// Bidder bid history
+// ---------------------------------------------------------------------
+app.get("/api/bidder/bids", asyncRoute(async (req, res) => {
+  const bidderId = String(req.query.bidder_id || "BID-1001");
+  const bidders = getBidders();
+  const view = await getAnalysis();
+  const tenders = getTenders();
+  const bids = getBids()
+    .filter((b) => b.bidder_id === bidderId)
+    .map((b) => {
+      const tender = tenders.find((t) => t.tender_id === b.tender_id);
+      return {
+        ...decorateBid(b, bidders, view),
+        tender_title: tender?.title || b.tender_id,
+        tender_status: tender?.status || "Unknown",
+        tender_deadline: tender?.deadline || tender?.closing_date || null,
+        award_date: tender?.award_date || null,
+        winner_name: tender?.status === "Awarded"
+          ? decorateTender(tender, getBids(), bidders).winner_name
+          : null,
+      };
+    })
+    .sort((a, b) => String(b.submission_date || "").localeCompare(String(a.submission_date || "")));
+
+  res.json({ count: bids.length, bids });
+}));
+
+// ---------------------------------------------------------------------
 // Bids
 // ---------------------------------------------------------------------
 const BID_SORT_FIELDS = {
