@@ -13,14 +13,15 @@
 
 const DEMO_TOKEN = "demo-session-token";
 
-const PUBLIC_PATHS = new Set(["/api/auth/login", "/api/health"]);
+const PUBLIC_PATHS = new Set(["/api/auth/login", "/api/health", "/api/bids"]);
+const PUBLIC_PREFIXES = ["/api/intelligence/"];
 
 export function requireAuth(req, res, next) {
   // Only the API is gated. When the container image also serves the built
   // React client from this process, its static assets must load before the
   // user has a token - otherwise the login page itself cannot render.
   if (!req.path.startsWith("/api")) return next();
-  if (PUBLIC_PATHS.has(req.path)) return next();
+  if (PUBLIC_PATHS.has(req.path) || PUBLIC_PREFIXES.some((prefix) => req.path.startsWith(prefix))) return next();
 
   const header = req.headers.authorization || "";
   const [scheme, token] = header.split(" ");
