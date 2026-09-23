@@ -40,7 +40,7 @@ import {
   signalLabel,
 } from "./utils/engineMapping.js";
 import { registryEvidenceFor } from "./utils/registrySignals.js";
-import { buildChecklist } from "./utils/checklist.js";
+import { buildChecklist, buildTenderComparison } from "./utils/checklist.js";
 import { toCsv } from "./utils/csv.js";
 import { requireAuth, DEMO_TOKEN } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -431,17 +431,24 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
     ])
   );
 
-  // Tender-level context comes from the engine too, when it knows the tender.
-  let tender = null;
-  try {
-    tender = await tenderDetail(bid.tender_id);
-  } catch (err) {
-    // Tender context is supplementary: the bid view still works without it.
-    // Log rather than swallow, so a broken lookup is visible in the server
-    // output instead of silently rendering an empty panel.
-    console.warn(`Tender lookup failed for ${bid.tender_id}: ${err.message}`);
-    tender = null;
+  // The shared tender catalog is the compliance source of truth for both portals.
+  const publishedTender = getTenders().find((t) => t.tender_id === bid.tender_id) || null;
+
+  let tender = publishedTender;
+  if (!tender) {
+    try {
+      tender = await tenderDetail(bid.tender_id);
+    } catch (err) {
+      console.warn("Tender lookup failed for " + bid.tender_id + ": " + err.message);
+      tender = null;
+    }
   }
+
+  const finalComparison = buildTenderComparison({
+    tender: publishedTender || tender,
+    bidder,
+    bid,
+  });
 
   res.json({
     bid: decorateBid(bid, bidders, view),
@@ -457,6 +464,7 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
       requires_human_investigation: true,
     },
     tender,
+    finalComparison,
     relatedEdges: bidderEdges.map((e) => {
       const otherId = e.source === bidder.bidder_id ? e.target : e.source;
       const other = bidders.find((x) => x.bidder_id === otherId);
