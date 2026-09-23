@@ -45,7 +45,7 @@ def extract_requirements(text: str) -> Dict[str, Any]:
 
     patterns = [
         (r"(?:minimum|min\.?)[^.\n]{0,80}(\d+)\s*years?[^.\n]{0,80}(?:experience|work)", "experience"),
-        (r"(?:turnover|average annual turnover)[^.\n]{0,80}(?:rs\.?|₹|I|■)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*(crore|lakh|million)?", "turnover"),
+        (r"(?:turnover|average annual turnover)[^.\n]{0,80}?(?:rs\.?|₹|I|■)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*(crore|lakh|million)?", "turnover"),
         (r"(?:gst|goods and services tax)[^.\n]{0,80}(?:registration|registered)", "tax"),
         (r"(?:udyam|msme)[^.\n]{0,80}(?:registration|certificate)", "msme"),
         (r"(?:pan)[^.\n]{0,80}(?:card|number|details)", "identity"),
@@ -88,7 +88,7 @@ def extract_requirements(text: str) -> Dict[str, Any]:
     clause_patterns = [
         (r"(?:delivery|completion)[^.\\n]{0,100}(?:within|in)\\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
         (r"(?:bid validity|validity of bid)[^.\\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
-        (r"(?:emd|earnest money deposit)[^.\\n]{0,80}(?:rs\\.?|₹)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
+        (r"(?:emd|earnest money deposit)[^.\\n]{0,80}?(?:rs\\.?|₹|I|■)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
         (r"(?:iso)[^.\\n]{0,60}(9001|14001|45001)", "certification"),
         (r"(?:oem|original equipment manufacturer)[^.\\n]{0,80}(?:authorization|certificate)", "oem"),
     ]
