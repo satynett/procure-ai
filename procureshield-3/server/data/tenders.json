@@ -1,0 +1,172 @@
+[
+  {
+    "tender_id":"GEM/2026/T/003001",
+    "title":"Network Security Equipment",
+    "department":"Ministry of Electronics & IT",
+    "category":"IT Hardware",
+    "status":"Open",
+    "deadline":"2026-10-12",
+    "estimated_value":4800000,
+    "rfp_filename":"RFP_IT_2026_014_Network_Security_Equipment.pdf",
+    "eligibility_summary":"5 years experience, ₹50 lakh average annual turnover, valid GST/PAN/Udyam, ISO 9001 and OEM authorization.",
+    "required_documents":["GST certificate","PAN card","Udyam/MSME certificate","Experience certificate","Financial statement","ISO 9001","OEM authorization","EMD proof"]
+  },
+  {
+    "tender_id":"GEM/2026/T/003002",
+    "title":"CCTV Surveillance System",
+    "department":"State Public Works Department",
+    "category":"Security Equipment",
+    "status":"Open",
+    "deadline":"2026-10-18",
+    "estimated_value":3200000,
+    "rfp_filename":"RFP_CCTV_Surveillance_2026.pdf",
+    "eligibility_summary":"Relevant supply experience, GST/PAN registration, financial capacity and OEM authorization.",
+    "required_documents":["GST certificate","PAN card","Experience certificate","Turnover proof","OEM authorization","EMD proof"]
+  },
+  {
+    "tender_id":"GEM/2026/T/003003",
+    "title":"Medical Equipment Supply",
+    "department":"State Health Department",
+    "category":"Medical Equipment",
+    "status":"Open",
+    "deadline":"2026-10-22",
+    "estimated_value":5600000,
+    "rfp_filename":"RFP_Health_Medical_Equipment_2026.pdf",
+    "eligibility_summary":"Relevant medical-equipment supply experience, statutory registrations and manufacturer authorization.",
+    "required_documents":["GST certificate","PAN card","Experience certificate","Financial statement","OEM authorization","Quality certificate","EMD proof"]
+  },
+  {
+    "tender_id":"GEM/2026/T/003004",
+    "title":"Office IT Hardware",
+    "department":"Government IT Procurement Cell",
+    "category":"IT Hardware",
+    "status":"Open",
+    "deadline":"2026-10-28",
+    "estimated_value":2400000,
+    "rfp_filename":"RFP_Office_IT_Hardware_2026.pdf",
+    "eligibility_summary":"IT hardware supply experience, GST/PAN, turnover evidence and authorized product support.",
+    "required_documents":["GST certificate","PAN card","Experience certificate","Turnover proof","OEM authorization","EMD proof"]
+  },
+  {
+    "tender_id":"GEM/2026/T/003005",
+    "title":"Electrical Equipment Supply",
+    "department":"Public Works Electrical Division",
+    "category":"Electrical Goods",
+    "status":"Open",
+    "deadline":"2026-11-03",
+    "estimated_value":4100000,
+    "rfp_filename":"RFP_Electrical_Equipment_2026.pdf",
+    "eligibility_summary":"Electrical supply experience, GST/PAN registration, turnover evidence and manufacturer authorization.",
+    "required_documents":["GST certificate","PAN card","Experience certificate","Turnover proof","OEM authorization","EMD proof"]
+  },
+  {
+    "tender_id":"GEM/2026/T/002001",
+    "title":"Electrical Equipment Supply — Phase I",
+    "department":"Public Works Electrical Division",
+    "category":"Electrical Goods",
+    "status":"Awarded",
+    "closing_date":"2026-06-02",
+    "award_date":"2026-06-16",
+    "estimated_value":1900000,
+    "rfp_filename":"RFP_Electrical_Phase_I_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002002",
+    "title":"Electrical Infrastructure Works",
+    "department":"State Procurement Division",
+    "category":"Electrical Goods",
+    "status":"Awarded",
+    "closing_date":"2026-06-10",
+    "award_date":"2026-06-24",
+    "estimated_value":4300000,
+    "rfp_filename":"RFP_Electrical_Infrastructure_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002003",
+    "title":"Security & Facility Services",
+    "department":"Public Services Division",
+    "category":"Security Services",
+    "status":"Awarded",
+    "closing_date":"2026-06-17",
+    "award_date":"2026-07-01",
+    "estimated_value":3100000,
+    "rfp_filename":"RFP_Security_Facility_Services_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002004",
+    "title":"Hospital Medical Equipment",
+    "department":"State Health Department",
+    "category":"Medical Equipment",
+    "status":"Awarded",
+    "closing_date":"2026-06-22",
+    "award_date":"2026-07-06",
+    "estimated_value":900000,
+    "rfp_filename":"RFP_Hospital_Medical_Equipment_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002005",
+    "title":"Medical Equipment — District Hospitals",
+    "department":"State Health Department",
+    "category":"Medical Equipment",
+    "status":"Awarded",
+    "closing_date":"2026-06-30",
+    "award_date":"2026-07-14",
+    "estimated_value":3900000,
+    "rfp_filename":"RFP_District_Hospital_Equipment_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002006",
+    "title":"Electrical Equipment — Regional Offices",
+    "department":"Regional Infrastructure Cell",
+    "category":"Electrical Goods",
+    "status":"Awarded",
+    "closing_date":"2026-07-06",
+    "award_date":"2026-07-20",
+    "estimated_value":5000000,
+    "rfp_filename":"RFP_Regional_Electrical_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002007",
+    "title":"Medical Equipment — Procurement Lot B",
+    "department":"State Health Department",
+    "category":"Medical Equipment",
+    "status":"Awarded",
+    "closing_date":"2026-07-15",
+    "award_date":"2026-07-29",
+    "estimated_value":4600000,
+    "rfp_filename":"RFP_Medical_Lot_B_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002008",
+    "title":"IT Hardware Procurement",
+    "department":"Government IT Procurement Cell",
+    "category":"IT Hardware",
+    "status":"Awarded",
+    "closing_date":"2026-07-21",
+    "award_date":"2026-08-04",
+    "estimated_value":2700000,
+    "rfp_filename":"RFP_IT_Hardware_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002009",
+    "title":"Medical Equipment — Regional Supply",
+    "department":"Regional Health Procurement",
+    "category":"Medical Equipment",
+    "status":"Awarded",
+    "closing_date":"2026-07-29",
+    "award_date":"2026-08-12",
+    "estimated_value":4800000,
+    "rfp_filename":"RFP_Regional_Medical_2026.pdf"
+  },
+  {
+    "tender_id":"GEM/2026/T/002010",
+    "title":"Medical Equipment — Phase II",
+    "department":"State Health Department",
+    "category":"Medical Equipment",
+    "status":"Awarded",
+    "closing_date":"2026-08-03",
+    "award_date":"2026-08-17",
+    "estimated_value":2300000,
+    "rfp_filename":"RFP_Medical_Phase_II_2026.pdf"
+  }
+]
