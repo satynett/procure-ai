@@ -19,6 +19,7 @@ export default function TenderManagement() {
   const [selectedBid,setSelectedBid]=useState("");
   const [bidderHistory,setBidderHistory]=useState(null);
   const [awardAmount,setAwardAmount]=useState("");
+  const [aiExpanded,setAiExpanded]=useState(false);
 
   async function load() {
     try { setError(""); setData(await api.officerTenderDetail(tenderId)); }
@@ -161,20 +162,45 @@ function Overview({t,data,bids,onBidders}) {
 }
 
 function RfpTab({t,onView}) {
- return <div className="grid gap-5 lg:grid-cols-2">
+ const ai=t.ai_analysis;
+ return <div className="space-y-5">
+   <div className="grid gap-5 lg:grid-cols-2">
+     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+       <h2 className="font-semibold">Published RFP</h2><p className="mt-1 text-sm text-slate-500">{t.rfp_filename}</p>
+       <button onClick={onView} className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold"><ExternalLink size={15} className="mr-1 inline"/>Open RFP PDF</button>
+     </section>
+     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+       <h2 className="font-semibold">Extracted requirements</h2>
+       <div className="mt-4 space-y-2">
+         {(t.required_documents||[]).map(x=><div key={x} className="flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm"><CheckCircle2 size={15} className="text-emerald-600"/>{x}</div>)}
+         {(t.eligibility_requirements||[]).map(x=><div key={x.requirement} className="rounded-lg border border-slate-100 p-3 text-sm"><b>{x.requirement}</b><div className="text-xs text-slate-500">{x.type}</div></div>)}
+       </div>
+     </section>
+   </div>
    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-     <h2 className="font-semibold">Published RFP</h2><p className="mt-1 text-sm text-slate-500">{t.rfp_filename}</p>
-     <button onClick={onView} className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold"><ExternalLink size={15} className="mr-1 inline"/>Open RFP PDF</button>
-   </section>
-   <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-     <h2 className="font-semibold">Extracted requirements</h2>
-     <div className="mt-4 space-y-2">
-       {(t.required_documents||[]).map(x=><div key={x} className="flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm"><CheckCircle2 size={15} className="text-emerald-600"/>{x}</div>)}
-       {(t.eligibility_requirements||[]).map(x=><div key={x.requirement} className="rounded-lg border border-slate-100 p-3 text-sm"><b>{x.requirement}</b><div className="text-xs text-slate-500">{x.type}</div></div>)}
+     <div className="flex flex-wrap items-start justify-between gap-3">
+       <div>
+         <div className="flex items-center gap-2"><h2 className="font-semibold">AI RFP Understanding</h2>{ai?.enabled && <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">OpenRouter · {ai.model}</span>}</div>
+         <p className="mt-1 text-sm text-slate-500">AI interprets the extracted RFP; deterministic requirements remain the compliance source.</p>
+       </div>
+       {ai && <button onClick={()=>setAiExpanded(v=>!v)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">{aiExpanded?"Hide details":"View AI details"}</button>}
      </div>
+     {!ai && <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-500">AI analysis is not available for this tender. The deterministic parser remains active.</div>}
+     {ai?.enabled && <div className="mt-4 space-y-4">
+       <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">{ai.summary || "No AI summary available."}</div>
+       {aiExpanded && <div className="grid gap-4 lg:grid-cols-2">
+         <AiList title="AI eligibility interpretation" items={ai.eligibility_requirements||[]} />
+         <AiList title="AI technical interpretation" items={ai.technical_requirements||[]} />
+         <AiDocs items={ai.required_documents||[]} />
+         <AiUncertainties items={ai.uncertainties||[]} />
+       </div>}
+     </div>}
    </section>
  </div>;
 }
+function AiList({title,items}){return <section className="rounded-lg border border-slate-100 p-4"><h3 className="text-sm font-semibold">{title}</h3><div className="mt-3 space-y-2">{items.length?items.map((x,i)=><div key={i} className="rounded-lg bg-slate-50 p-3 text-sm"><div className="font-medium text-slate-800">{x.requirement}</div><div className="mt-1 text-xs text-slate-500">{x.type}{x.mandatory===false?" · conditional":" · mandatory"}{x.minimum_value!=null?" · min "+x.minimum_value+" "+(x.unit||""):""}</div></div>):<div className="text-sm text-slate-400">No items detected.</div>}</div></section>}
+function AiDocs({items}){return <section className="rounded-lg border border-slate-100 p-4"><h3 className="text-sm font-semibold">AI-required documents</h3><div className="mt-3 flex flex-wrap gap-2">{items.length?items.map(x=><span key={x} className="rounded-full bg-slate-50 px-3 py-1.5 text-xs text-slate-600">{x}</span>):<span className="text-sm text-slate-400">No documents detected.</span>}</div></section>}
+function AiUncertainties({items}){return <section className="rounded-lg border border-amber-100 bg-amber-50/50 p-4"><h3 className="text-sm font-semibold text-amber-900">AI review flags</h3><div className="mt-3 space-y-2">{items.length?items.map((x,i)=><div key={i} className="flex gap-2 text-sm text-amber-900"><AlertTriangle size={15} className="mt-0.5 shrink-0"/><span>{x}</span></div>):<div className="text-sm text-amber-800">No uncertainties detected.</div>}</div></section>}
 
 function BiddersTab({bids,t,onAward,onHistory}) {
  return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
