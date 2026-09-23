@@ -81,7 +81,7 @@ Open **PowerShell** and run:
 cd "$HOME\Downloads"
 git clone https://github.com/satynett/procure-ai.git
 cd procure-ai\procureshield-3
-git checkout ai-integration
+git checkout main
 ```
 
 ### 7. Create the Python Environment
@@ -116,7 +116,7 @@ npm run install:all
 
 Wait for the installation to finish. It may take several minutes.
 
-### 9. Configure PostgreSQL
+### 9. Configure PostgreSQL and the AI API Key
 
 Create the environment file:
 
@@ -125,14 +125,37 @@ Copy-Item server\.env.example server\.env
 notepad server\.env
 ```
 
-Find the `DATABASE_URL` line and replace the PostgreSQL password with the password you created during installation.
+#### PostgreSQL
 
+Find the `DATABASE_URL` line and replace the PostgreSQL password with the password you created during installation.
 
 Example:
 
 ```env
 DATABASE_URL=postgresql://postgres:MyPassword@localhost:5432/procureshield
 ```
+
+#### OpenRouter API key
+
+The AI features use **OpenRouter**. Each person running the project should use their own OpenRouter API key.
+
+1. Create an account at https://openrouter.ai/
+2. Open the OpenRouter dashboard and create an API key.
+3. In `server/.env`, add:
+
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=openrouter/free
+```
+
+Replace `your_openrouter_api_key_here` with your actual key.
+
+**Important:**
+- Never commit or upload your API key to GitHub.
+- Keep it only in your local `server/.env` file.
+- Do not share your API key with other people.
+
+If you do not configure the API key, the non-AI parts of the project may still start, but AI-powered RFP/document analysis will not work.
 
 Save and close the file.
 
