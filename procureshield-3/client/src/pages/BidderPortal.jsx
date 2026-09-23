@@ -9,9 +9,20 @@ export default function BidderPortal() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    api.bids({}).then((res) => { setBids(res.bids || []); setLoading(false); }).catch(() => setLoading(false));
+    let alive = true;
+    api.bids({}).then((res) => {
+      if (!alive) return;
+      setBids(res.bids || []);
+      setLoading(false);
+    }).catch((err) => {
+      if (!alive) return;
+      setError(err?.message || "Unable to load procurement opportunities.");
+      setLoading(false);
+    });
+    return () => { alive = false; };
   }, []);
 
   const tenders = useMemo(() => {
@@ -57,7 +68,7 @@ export default function BidderPortal() {
 
       <section id="tenders" className="space-y-4">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="text-xl font-bold">Open procurement opportunities</h2><p className="text-sm text-slate-500">Prototype opportunities derived from the sandbox procurement dataset.</p></div><div className="flex gap-2"><div className="relative"><Search className="absolute left-3 top-2.5 text-slate-400" size={16}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search tenders" className="rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm"/></div><select value={category} onChange={e=>setCategory(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"><option value="">All categories</option>{categories.map(c=><option key={c}>{c}</option>)}</select></div></div>
-        {loading ? <div className="rounded-xl bg-white p-10 text-center text-sm text-slate-400">Loading opportunities...</div> :
+        {loading ? <div className="rounded-xl bg-white p-10 text-center text-sm text-slate-400">Loading opportunities...</div> : error ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800"><b>Could not load live tender data.</b><div className="mt-1 text-xs">{error}</div><button onClick={()=>window.location.reload()} className="mt-3 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">Retry</button></div> :
         <div className="grid gap-4 lg:grid-cols-2">{filtered.map(t=><TenderCard key={t.tender_id} tender={t} navigate={navigate}/>)}</div>}
       </section>
 
