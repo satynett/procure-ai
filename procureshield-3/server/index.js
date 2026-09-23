@@ -179,7 +179,7 @@ app.post("/api/auth/login", rateLimit({ windowMs: 60_000, max: 10 }), (req, res)
 // ---------------------------------------------------------------------
 app.get("/api/gov/verify/:bidderId", asyncRoute(async (req, res) => {
   const bidderId = decodeURIComponent(req.params.bidderId);
-  const result = verifyBidderById(getBidders(), bidderId);
+  const result = await verifyBidderById(getBidders(), bidderId);
   if (!result) return res.status(404).json({ message: "Bidder not found" });
   res.json(result);
 }));
@@ -188,7 +188,8 @@ app.get("/api/gov/gstn/verify/:gstin", asyncRoute(async (req, res) => {
   const bidders = getBidders();
   const bidder = bidders.find((b) => String(b.gst_number || "").toUpperCase() === String(req.params.gstin || "").toUpperCase());
   if (!bidder) return res.status(404).json({ source: "GSTN_SANDBOX", status: "Not Found" });
-  const verification = await verifyBidderById(bidders, bidder.bidder_id);\n  res.json(verification.checks.find((x) => x.source === "GSTN_SANDBOX"));
+  const verification = await verifyBidderById(bidders, bidder.bidder_id);
+  res.json(verification.checks.find((x) => x.source === "GSTN_SANDBOX"));
 }));
 
 app.get("/api/engine/status", asyncRoute(async (req, res) => {
@@ -382,34 +383,79 @@ app.delete("/api/officer/tenders/:id",async (req,res)=>{
 
 
 app.post("/api/bidder/bids", async (req, res) => {
-  const { tender_id, company_name, documents = [], bid_amount = null } = req.body || {};
+  const {
+    tender_id,
+    company_name,
+    documents = [],
+    bid_amount = null,
+    bidder_id = "BID-2001",
+  } = req.body || {};
+
   const tender = getTenders().find((t) => t.tender_id === tender_id);
-  if (!tender || tender.status !== "Open") return res.status(400).json({ message: "This tender is not open for bidding." });
-  if (!company_name?.trim()) return res.status(400).json({ message: "Company name is required." });
+
+  if (!tender || tender.status !== "Open") {
+    return res.status(400).json({
+      message: "This tender is not open for bidding.",
+    });
+  }
+
+  if (!company_name?.trim()) {
+    return res.status(400).json({
+      message: "Company name is required.",
+    });
+  }
+
+  const bidders = getBidders();
+  const bidder = bidders.find(
+    (b) => String(b.bidder_id) === String(bidder_id)
+  );
+
+  if (!bidder) {
+    return res.status(400).json({
+      message: "Bidder profile not found.",
+      bidder_id,
+    });
+  }
 
   const bids = getBids();
-  const sequence = bids.length + 1;
+
+  // Generate the next GEM-style bid ID from existing PostgreSQL bids.
+  const maxBidNumber = bids.reduce((max, b) => {
+    const match = String(b.bid_id || "").match(/^GEM\/\d{4}\/B\/(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+
+  const nextBidNumber = maxBidNumber + 1;
+  const year = new Date().getFullYear();
+
   const bid = {
-    bid_id: `DEMO/BID/2026/${String(sequence).padStart(4, "0")}`,
+    bid_id: `GEM/${year}/B/${String(nextBidNumber).padStart(4, "0")}`,
     tender_id,
-    bidder_id: "BID-1001",
+    bidder_id: bidder.bidder_id,
     bidder_company_name: company_name.trim(),
     category: tender.category,
     bid_amount: bid_amount ? Number(bid_amount) : null,
     submission_date: new Date().toISOString().slice(0, 10),
     verification_status: "Needs Review",
-    submitted_documents: documents.map((d) => typeof d === "string" ? d : d.name).filter(Boolean),
+    submitted_documents: documents
+      .map((d) => (typeof d === "string" ? d : d.name))
+      .filter(Boolean),
   };
+
   bids.push(bid);
   await writeJson("bids.json", bids);
-  res.status(201).json({ success: true, bid });
+
+  res.status(201).json({
+    success: true,
+    bid,
+  });
 });
 
 // ---------------------------------------------------------------------
 // Bidder bid history
 // ---------------------------------------------------------------------
 app.get("/api/bidder/bids", asyncRoute(async (req, res) => {
-  const bidderId = String(req.query.bidder_id || "BID-1001");
+  const bidderId = String(req.query.bidder_id || "BID-2001");
   const bidders = getBidders();
   const view = await getAnalysis();
   const tenders = getTenders();
@@ -541,8 +587,17 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
   const bid = getBids().find((b) => b.bid_id === bidId);
   if (!bid) return res.status(404).json({ message: "Bid not found" });
 
-  const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
-  const view = await getAnalysis();
+const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
+
+if (!bidder) {
+  return res.status(404).json({
+    message: "Bidder profile not found for this bid.",
+    bid_id: bid.bid_id,
+    bidder_id: bid.bidder_id,
+  });
+}
+
+const view = await getAnalysis();
   const risk = view.riskMap[bid.bidder_id] || {
     score: 0,
     category: "Low",
