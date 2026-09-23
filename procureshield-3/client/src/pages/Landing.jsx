@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, Share2, Users, ArrowRight, FlaskConical } from "lucide-react";
+import { ShieldCheck, Share2, Users, ArrowRight, FlaskConical, Building2, BriefcaseBusiness } from "lucide-react";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -33,12 +33,18 @@ export default function Landing() {
           Automated bid verification and bidder relationship analysis for procurement officers.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">
-          <button
-            onClick={() => navigate("/login")}
-            className="flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-600"
-          >
-            Enter Demo <ArrowRight size={16} />
-          </button>
+          <div className="grid w-full max-w-2xl gap-4 sm:grid-cols-2">
+            <button onClick={() => navigate("/bidder")} className="rounded-xl border border-white/10 bg-white/10 p-5 text-left hover:bg-white/15">
+              <div className="flex items-center gap-2 text-brand-300"><BriefcaseBusiness size={18}/><span className="text-xs font-semibold uppercase tracking-wide">Bidder Portal</span></div>
+              <div className="mt-2 text-base font-semibold">Find tenders & check eligibility</div>
+              <div className="mt-1 text-xs text-slate-400">Browse opportunities, verify documents and prepare your bid.</div>
+            </button>
+            <button onClick={() => navigate("/login")} className="rounded-xl bg-brand-500 p-5 text-left shadow-lg shadow-brand-500/20 hover:bg-brand-600">
+              <div className="flex items-center gap-2 text-white"><Building2 size={18}/><span className="text-xs font-semibold uppercase tracking-wide">Officer Portal</span></div>
+              <div className="mt-2 text-base font-semibold">Manage procurement & review bids</div>
+              <div className="mt-1 text-xs text-white/70">Upload RFPs, verify documents, inspect risk and bidder networks.</div>
+            </button>
+          </div>
         </div>
         <p className="mt-3 text-xs text-slate-500">
           Uses realistic synthetic/sandbox data only. Not connected to live GeM government systems.
