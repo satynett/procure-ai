@@ -18,8 +18,21 @@ export default function CreateTender() {
   const [file, setFile] = useState(null);
   const [parsed, setParsed] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  async function analyzeRfp() {
+    if (!file) return setError("Upload the RFP PDF first.");
+    setAnalyzing(true); setError(""); setMessage("");
+    try {
+      const content_base64 = await encodeFile(file);
+      const result = await api.intelligencePdf({ filename:file.name, content_type:"application/pdf", content_base64 });
+      setParsed({ ...result.requirements, rfp_text: result.text, extraction_status: result.extraction_status });
+      setMessage("RFP analyzed. Review the extracted checklist before saving or publishing.");
+    } catch(e) { setError(e.message || "RFP analysis failed."); }
+    finally { setAnalyzing(false); }
+  }
 
   async function save(publish) {
     if (!file) return setError("Upload the RFP PDF first.");
@@ -75,7 +88,8 @@ export default function CreateTender() {
           <FileText className="mx-auto text-slate-400" size={30}/>
           <input className="mx-auto mt-4 block text-sm" type="file" accept=".pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setParsed(null);}} />
           {file && <div className="mt-3 text-sm font-medium text-slate-700">{file.name}</div>}
-          <p className="mt-2 text-xs text-slate-400">PDF only. The prototype extracts common eligibility and document clauses using the existing engine.</p>
+          <p className="mt-2 text-xs text-slate-400">PDF only. Analyze it first so you can inspect the extracted checklist before publishing.</p>
+          <button disabled={!file || analyzing} onClick={analyzeRfp} className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50">{analyzing ? "Analyzing RFP…" : "Analyze RFP"}</button>
         </div>
       </section>
 
