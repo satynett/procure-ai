@@ -242,3 +242,24 @@ export async function intelligencePdf(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function intelligenceValidateDocument(payload) {
+  return engineFetch("/intelligence/validate-document", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function intelligenceRequirements(payload) {
+  return engineFetch("/intelligence/requirements", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function intelligenceEligibility(payload) {
+  return engineFetch("/intelligence/eligibility", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
