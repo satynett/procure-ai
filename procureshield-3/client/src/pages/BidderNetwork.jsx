@@ -53,7 +53,7 @@ function BidderNode({ data }) {
   return (
     <div
       onClick={data.onClick}
-      className={`flex w-40 cursor-pointer items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 shadow-md transition-transform hover:scale-105 ${
+      className={`flex w-56 cursor-pointer items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 shadow-md transition-transform hover:scale-105 ${
         data.riskCategory === "High" || data.riskCategory === "Critical"
           ? "border-red-400"
           : data.riskCategory === "Medium"
@@ -117,20 +117,20 @@ export default function BidderNetwork() {
 
     const nodesOut = [];
     const edgesOut = [];
-    const clusterSpacingX = 480;
+    const clusterSpacingX = 700;
     let clusterIdx = 0;
 
     raw.clusters.forEach((cluster) => {
       const members = raw.nodes.filter((n) => cluster.members.includes(n.bidder_id));
       const cx = clusterIdx * clusterSpacingX;
       const cy = 0;
-      const R = 150;
+      const R = 230;
       const n = members.length;
 
       members.forEach((m, i) => {
         const angle = (2 * Math.PI * i) / n - Math.PI / 2;
         const x = cx + R * Math.cos(angle);
-        const y = cy + R * Math.sin(angle) + 220;
+        const y = cy + R * Math.sin(angle) + 300;
         nodesOut.push({
           id: m.bidder_id,
           type: "bidder",
@@ -163,8 +163,8 @@ export default function BidderNetwork() {
           if (groupMembers.length < 2) return;
           const angle = (2 * Math.PI * attrOffset) / 6 + Math.PI / 6;
           attrOffset++;
-          const rx = cx + 60 * Math.cos(angle);
-          const ry = cy + 60 * Math.sin(angle) + 220;
+          const rx = cx + 90 * Math.cos(angle);
+          const ry = cy + 90 * Math.sin(angle) + 300;
           const attrId = `attr-${cluster.cluster_id}-${ag.type}-${attrOffset}`;
           nodesOut.push({
             id: attrId,
@@ -261,7 +261,9 @@ export default function BidderNetwork() {
               edges={edges}
               nodeTypes={nodeTypes}
               fitView
-              minZoom={0.3}
+              fitViewOptions={{ padding: 0.28, minZoom: 0.2, maxZoom: 1.2 }}
+              minZoom={0.2}
+              defaultEdgeOptions={{ animated: false }}
               proOptions={{ hideAttribution: true }}
             >
               <Background gap={20} color="#eef2f7" />
@@ -271,7 +273,7 @@ export default function BidderNetwork() {
         </div>
 
         {/* Side panel */}
-        <div className="w-80 flex-shrink-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+        <div className="w-96 flex-shrink-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-card">
           {!selected ? (
             <div>
               <h3 className="mb-3 text-sm font-semibold text-slate-800">Suspicious Clusters</h3>
