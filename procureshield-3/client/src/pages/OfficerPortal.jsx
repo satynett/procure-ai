@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileUp, FileCheck2, Share2, FileText, ArrowRight, AlertTriangle, Loader2 } from "lucide-react";
+import { FileUp, FileCheck2, Share2, FileText, ClipboardCheck, ArrowRight, AlertTriangle, Loader2 } from "lucide-react";
 import { api } from "../api.js";
 
 export default function OfficerPortal() {
@@ -62,6 +62,7 @@ export default function OfficerPortal() {
             <Action step="2" title="Review bids" text="See bidder status, verification results, evidence and risk for submitted bids." icon={FileCheck2} onClick={() => navigate("/app/bid-verification")} />
             <Action step="3" title="Inspect bidder network" text="Explore shared bidder attributes and engine-generated relationship signals." icon={Share2} onClick={() => navigate("/app/bidder-network")} />
             <Action step="4" title="Generate report" text="Open the report workspace for verification, network and audit outputs." icon={FileText} onClick={() => navigate("/app/reports")} />
+            <Action step="5" title="Final compliance comparison" text="Compare each submitted bid against the exact tender checklist before recording the officer decision." icon={ClipboardCheck} onClick={() => navigate("/app/bid-verification")} />
           </section>
 
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
