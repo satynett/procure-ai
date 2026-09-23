@@ -46,6 +46,7 @@ import { requireAuth, DEMO_TOKEN } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { initDatabase, getCollection, replaceCollection } from "./db/store.js";
 import { verifyBidderById } from "./sandbox/governmentVerification.js";
+import { analyzeRfpWithAI } from "./utils/aiClient.js";
 
 dotenv.config();
 
@@ -925,6 +926,11 @@ app.post("/api/intelligence/pdf", asyncRoute(async (req, res) => {
 
 app.post("/api/intelligence/requirements", asyncRoute(async (req, res) => {
   res.json(await intelligenceRequirements(req.body));
+}));
+
+app.post("/api/intelligence/ai-requirements", asyncRoute(async (req, res) => {
+  const result = await analyzeRfpWithAI(req.body?.text || "");
+  res.json(result);
 }));
 
 app.post("/api/intelligence/validate-document", asyncRoute(async (req, res) => {
