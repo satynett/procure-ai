@@ -54,6 +54,7 @@ export default function BidIntelligence() {
   const [busy, setBusy] = useState(false);
   const [loadingTenders, setLoadingTenders] = useState(true);
   const [error, setError] = useState("");
+  const [governmentCheck, setGovernmentCheck] = useState(null);
 
   useEffect(() => {
     api.tenders("Open")
@@ -76,6 +77,7 @@ export default function BidIntelligence() {
     setBusy(true);
     setError("");
     setChecks([]);
+    setGovernmentCheck(null);
     try {
       const results = [];
       for (const file of files) {
@@ -88,6 +90,8 @@ export default function BidIntelligence() {
         results.push({ ...result, filename: file.name });
       }
       setChecks(results);
+      const gov = await api.governmentVerification("BID-1001");
+      setGovernmentCheck(gov);
     } catch (e) {
       setError(e.message || "Document check failed.");
     } finally {
@@ -196,6 +200,31 @@ export default function BidIntelligence() {
               </div>
             )}
           </section>
+
+          {governmentCheck && (
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Government Verification Sandbox</h2>
+                  <p className="mt-1 text-sm text-slate-500">Synthetic API-compatible checks for prototype validation. No live government systems are queried.</p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">SANDBOX</span>
+              </div>
+              <div className="mt-4 grid gap-2 md:grid-cols-2">
+                {governmentCheck.checks.map((check) => (
+                  <div key={check.source} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-semibold text-slate-800">{check.check}</div>
+                      <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${check.status === "Clear" || check.status === "Verified" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                        {check.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">{check.source} · {check.verification_id}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-end justify-between gap-3">
