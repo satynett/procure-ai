@@ -188,7 +188,7 @@ app.get("/api/gov/gstn/verify/:gstin", asyncRoute(async (req, res) => {
   const bidders = getBidders();
   const bidder = bidders.find((b) => String(b.gst_number || "").toUpperCase() === String(req.params.gstin || "").toUpperCase());
   if (!bidder) return res.status(404).json({ source: "GSTN_SANDBOX", status: "Not Found" });
-  res.json(verifyBidderById(bidders, bidder.bidder_id).checks.find((x) => x.source === "GSTN_SANDBOX"));
+  const verification = await verifyBidderById(bidders, bidder.bidder_id);\n  res.json(verification.checks.find((x) => x.source === "GSTN_SANDBOX"));
 }));
 
 app.get("/api/engine/status", asyncRoute(async (req, res) => {
