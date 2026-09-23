@@ -7,9 +7,10 @@ export default function OfficerPortal() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [tenders, setTenders] = useState([]);
 
   useEffect(() => {
-    api.dashboard().then(setData).catch((err) => setError(err?.message || "Could not load officer data."));
+    Promise.all([api.dashboard(), api.tenders()]).then(([dashboard, tenderData]) => { setData(dashboard); setTenders(tenderData.tenders || []); }).catch((err) => setError(err?.message || "Could not load officer data."));
   }, []);
 
   const stats = data?.stats || {};
@@ -40,6 +41,21 @@ export default function OfficerPortal() {
             <Stat label="High risk" value={stats.highRiskBids ?? "—"} />
             <Stat label="Networks" value={stats.potentialNetworks ?? "—"} />
           </div>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+            <div className="flex items-center justify-between gap-3">
+              <div><h2 className="font-semibold text-slate-900">Published Tenders</h2><p className="mt-1 text-sm text-slate-500">This is the same tender data visible in the bidder portal.</p></div>
+              <div className="text-xs text-slate-500">{tenders.filter(t => t.status === "Open").length} open · {tenders.filter(t => t.status === "Awarded").length} awarded</div>
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {tenders.slice(0, 6).map(t => (
+                <div key={t.tender_id} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <div className="flex items-start justify-between gap-2"><div><div className="text-xs font-semibold text-brand-600">{t.tender_id}</div><div className="mt-1 text-sm font-semibold">{t.title}</div></div><span className="text-xs font-semibold">{t.status}</span></div>
+                  <div className="mt-1 text-xs text-slate-500">{t.department} · {t.bid_count} bids</div>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <section className="grid gap-4 md:grid-cols-2">
             <Action step="1" title="Analyze RFP" text="Upload a tender PDF and generate its eligibility and document checklist." icon={FileUp} onClick={() => navigate("/app/bid-intelligence")} />
