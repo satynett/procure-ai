@@ -15,8 +15,10 @@ import {
   FileSearch,
 } from "lucide-react";
 import { useApp } from "../store.jsx";
+import { Building2 } from "lucide-react";
 
 const NAV = [
+  { to: "/app/officer", label: "Officer Command Center", icon: Building2 },
   { to: "/app/bid-intelligence", label: "Bid Intelligence", icon: FileSearch },
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/bid-verification", label: "Bid Verification", icon: ShieldCheck },
