@@ -113,7 +113,7 @@ export default function BidderPortal() {
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between"><div><h2 className="font-semibold">My Bids</h2><p className="text-sm text-slate-500">Your submitted bids and current review status.</p></div><span className="text-xs text-slate-400">{myBids.length} submitted</span></div>
-          <div className="mt-3 space-y-2">{myBids.length ? myBids.slice(0,5).map((b,i)=><div key={b.bid_id||i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-3 text-sm"><span className="font-medium">{b.tender_id}</span><span>{b.bid_id}</span><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Under Review</span></div>) : <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No bids submitted from this demo session yet.</div>}</div>
+          <div className="mt-3 space-y-2">{myBids.length ? myBids.slice(0,5).map((b,i)=>{const status=b.verification_status||"Under Review"; const statusClass=status==="Verified"?"bg-emerald-50 text-emerald-700":status==="Rejected"?"bg-red-50 text-red-700":"bg-amber-50 text-amber-700"; return <div key={b.bid_id||i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-3 text-sm"><span className="font-medium">{b.tender_id}</span><span>{b.bid_id}</span><span className={"rounded-full px-2 py-1 text-xs font-semibold "+statusClass}>{status}</span></div>}) : <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No bids submitted from this bidder account yet.</div>}</div>
         </section>
       </main>
 
