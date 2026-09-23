@@ -83,6 +83,96 @@ function rfpFor(title, value) {
   ].join("\\n");
 }
 
+// Creates a real PDF document from the current synthetic tender data.
+// Officer-uploaded PDFs are never replaced; this is only used for demo seed RFPs.
+export function makeRfpPdfBase64(tender) {
+  const clean = (value) => String(value ?? "")
+    .replace(/₹/g, "INR ")
+    .replace(/[^\\x20-\\x7E]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\\(/g, "\\(")
+    .replace(/\\)/g, "\\)");
+
+  const rawLines = [
+    "GOVERNMENT E-PROCUREMENT — REQUEST FOR PROPOSAL",
+    "",
+    "Tender ID: " + tender.tender_id,
+    "Tender Title: " + tender.title,
+    "Department: " + tender.department,
+    "Category: " + tender.category,
+    "Estimated Tender Value: INR " + Number(tender.estimated_value || 0).toLocaleString("en-IN"),
+    "Bid Deadline: " + tender.deadline,
+    "",
+    "ELIGIBILITY AND BID CONDITIONS",
+    ...String(tender.rfp_text || "").split(/\\n+/),
+    "",
+    "REQUIRED DOCUMENTS",
+    ...(tender.required_documents || []).map((doc, i) => (i + 1) + ". " + doc),
+    "",
+    "IMPORTANT DATES",
+    ...(tender.important_dates || []),
+  ];
+
+  const lines = [];
+  for (const line of rawLines) {
+    const text = clean(line);
+    if (!text) {
+      lines.push("");
+      continue;
+    }
+    for (let i = 0; i < text.length; i += 92) lines.push(text.slice(i, i + 92));
+  }
+
+  const pageHeight = 842;
+  const top = 790;
+  const lineHeight = 17;
+  const maxLines = Math.floor((top - 48) / lineHeight);
+  const pages = [];
+  for (let i = 0; i < lines.length; i += maxLines) pages.push(lines.slice(i, i + maxLines));
+  if (!pages.length) pages.push(["RFP document"]);
+
+  const objects = [];
+  const pageRefs = [];
+  const fontObj = 3 + pages.length * 2;
+  const catalogObj = 1;
+  const pagesObj = 2;
+
+  objects[catalogObj] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[pagesObj] = null;
+
+  for (let i = 0; i < pages.length; i++) {
+    const pageObj = 3 + i * 2;
+    const contentObj = pageObj + 1;
+    pageRefs.push(pageObj + " 0 R");
+
+    const commands = ["BT", "/F1 14 Tf", "50 800 Td", "(" + clean(pages[i][0] || "RFP document") + ") Tj", "/F1 10 Tf"];
+    for (let j = 1; j < pages[i].length; j++) {
+      commands.push("0 -17 Td", "(" + clean(pages[i][j]) + ") Tj");
+    }
+    commands.push("ET");
+    const stream = commands.join("\n");
+    objects[contentObj] = "<< /Length " + Buffer.byteLength(stream, "latin1") + " >>\\nstream\\n" + stream + "\\nendstream";
+    objects[pageObj] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 " + fontObj + " 0 R >> >> /Contents " + contentObj + " 0 R >>";
+  }
+
+  objects[pagesObj] = "<< /Type /Pages /Kids [" + pageRefs.join(" ") + "] /Count " + pages.length + " >>";
+  objects[fontObj] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+
+  let pdf = "%PDF-1.4\\n";
+  const offsets = [0];
+  for (let i = 1; i < objects.length; i++) {
+    offsets[i] = Buffer.byteLength(pdf, "latin1");
+    pdf += i + " 0 obj\\n" + objects[i] + "\\nendobj\\n";
+  }
+  const xref = Buffer.byteLength(pdf, "latin1");
+  pdf += "xref\\n0 " + objects.length + "\\n0000000000 65535 f \\n";
+  for (let i = 1; i < objects.length; i++) {
+    pdf += String(offsets[i]).padStart(10, "0") + " 00000 n \\n";
+  }
+  pdf += "trailer\\n<< /Size " + objects.length + " /Root 1 0 R >>\\nstartxref\\n" + xref + "\\n%%EOF";
+  return Buffer.from(pdf, "latin1").toString("base64");
+}
+
 const tenders = tenderTemplates.map(([title,department,category,estimated_value],i)=>{
   const open=i<5;
   const closed=i>=5 && i<7;
@@ -96,7 +186,7 @@ const tenders = tenderTemplates.map(([title,department,category,estimated_value]
     deadline,estimated_value,
     rfp_filename:tender_id.replaceAll("/","_") + "_RFP.pdf",
     rfp_text:rfpText,
-    rfp_content_base64:Buffer.from(rfpText,"utf8").toString("base64"),
+    rfp_content_base64:makeRfpPdfBase64({ tender_id, title, department, category, estimated_value, deadline, rfp_text:rfpText, required_documents:requiredDocs, important_dates:["Bid deadline: " + deadline,"Bid validity: 90 days"] }),
     eligibility_summary:"Relevant experience, valid GST/PAN, financial capacity, required statutory registrations and tender-specific technical eligibility.",
     eligibility_requirements:["Minimum 3 years relevant experience","Valid GST registration","Valid PAN","Minimum turnover as stated in RFP"],
     technical_requirements:["Supply and installation of " + category.toLowerCase() + " as per RFP","OEM/manufacturer authorization where applicable","Compliance with tender specifications"],
