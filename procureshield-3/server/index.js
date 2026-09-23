@@ -140,7 +140,7 @@ function decorateBid(bid, bidders, view) {
   const risk = view.riskMap[bid.bidder_id] || { score: 0, category: "Low" };
   return {
     ...bid,
-    bidder_name: bidder ? bidder.company_name : "Unknown",
+    bidder_name: bid.bidder_company_name || (bidder ? bidder.company_name : "Unknown"),
     msme_status: bidder ? bidder.msme_status : "Unknown",
     // The engine scores companies, not individual bids: a bid inherits the
     // risk of the bidder that submitted it. Any stored `risk_score` in
@@ -295,7 +295,7 @@ app.post("/api/bidder/bids", (req, res) => {
   const bid = {
     bid_id: `DEMO/BID/2026/${String(sequence).padStart(4, "0")}`,
     tender_id,
-    bidder_id: "BIDDER-DEMO",
+    bidder_id: "BID-1001",
     bidder_company_name: company_name.trim(),
     category: tender.category,
     bid_amount: bid_amount ? Number(bid_amount) : null,
