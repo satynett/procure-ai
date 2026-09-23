@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import { ArrowLeft, FileCheck2, UploadCloud, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, FileCheck2, UploadCloud, AlertTriangle, CheckCircle2, XCircle, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function encodeFile(file) {
@@ -55,6 +55,7 @@ export default function BidIntelligence() {
   const [loadingTenders, setLoadingTenders] = useState(true);
   const [error, setError] = useState("");
   const [governmentCheck, setGovernmentCheck] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
 
   useEffect(() => {
     api.tenders("Open")
@@ -78,6 +79,7 @@ export default function BidIntelligence() {
     setError("");
     setChecks([]);
     setGovernmentCheck(null);
+    setAiAnalysis(null);
     try {
       const results = [];
       for (const file of files) {
@@ -92,6 +94,12 @@ export default function BidIntelligence() {
       setChecks(results);
       const gov = await api.governmentVerification("BID-2001");
       setGovernmentCheck(gov);
+
+      // AI interprets the officer-published RFP text. Exact compliance decisions remain in the deterministic verification layer.
+      if (selectedTender?.rfp_text) {
+        const ai = await api.intelligenceAIRequirements(selectedTender.rfp_text);
+        setAiAnalysis(ai);
+      }
     } catch (e) {
       setError(e.message || "Document check failed.");
     } finally {
@@ -201,6 +209,25 @@ export default function BidIntelligence() {
             )}
           </section>
 
+          {aiAnalysis && (
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-violet-50 p-2 text-violet-600"><Sparkles size={20}/></div>
+                  <div><h2 className="font-semibold">AI RFP Understanding</h2><p className="mt-1 text-sm text-slate-500">AI interprets the officer-published RFP; exact compliance remains rule-based.</p></div>
+                </div>
+                <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">{aiAnalysis.enabled ? ("AI · " + (aiAnalysis.model || "OpenRouter")) : "NOT CONFIGURED"}</span>
+              </div>
+              {!aiAnalysis.enabled && <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{aiAnalysis.message}</div>}
+              {aiAnalysis.error && <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">AI analysis failed: {aiAnalysis.error}. Existing deterministic parsing remains available.</div>}
+              {aiAnalysis.enabled && !aiAnalysis.error && <div className="mt-4 space-y-4">
+                {aiAnalysis.summary && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{aiAnalysis.summary}</p>}
+                {(aiAnalysis.eligibility_requirements || []).length > 0 && <div><div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">AI-extracted eligibility</div><div className="space-y-2">{aiAnalysis.eligibility_requirements.slice(0, 8).map((item, i) => <div key={i} className="rounded-lg border border-slate-100 bg-slate-50 p-3"><div className="text-sm font-medium text-slate-800">{item.requirement}</div><div className="mt-1 text-xs text-slate-500">{item.type || "requirement"}{item.minimum_value != null ? " · Minimum " + item.minimum_value + (item.unit ? " " + item.unit : "") : ""}{item.period ? " · " + item.period : ""}</div></div>)}</div></div>}
+                {(aiAnalysis.technical_requirements || []).length > 0 && <div><div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">AI-extracted technical requirements</div><div className="space-y-2">{aiAnalysis.technical_requirements.slice(0, 6).map((item, i) => <div key={i} className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">{item.requirement}</div>)}</div></div>}
+                {(aiAnalysis.uncertainties || []).length > 0 && <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800"><strong>AI uncertainties:</strong> {aiAnalysis.uncertainties.join(" · ")}</div>}
+              </div>}
+            </section>
+          )}
           {governmentCheck && (
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
