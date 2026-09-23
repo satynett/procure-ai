@@ -88,13 +88,13 @@ function rfpFor(title, value) {
 export function makeRfpPdfBase64(tender) {
   const clean = (value) => String(value ?? "")
     .replace(/₹/g, "INR ")
-    .replace(/[^\\x20-\\x7E]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
     .replace(/\\/g, "\\\\")
-    .replace(/\\(/g, "\\(")
-    .replace(/\\)/g, "\\)");
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
 
   const rawLines = [
-    "GOVERNMENT E-PROCUREMENT — REQUEST FOR PROPOSAL",
+    "GOVERNMENT E-PROCUREMENT - REQUEST FOR PROPOSAL",
     "",
     "Tender ID: " + tender.tender_id,
     "Tender Title: " + tender.title,
@@ -104,7 +104,7 @@ export function makeRfpPdfBase64(tender) {
     "Bid Deadline: " + tender.deadline,
     "",
     "ELIGIBILITY AND BID CONDITIONS",
-    ...String(tender.rfp_text || "").split(/\\n+/),
+    ...String(tender.rfp_text || "").split(/\n+/),
     "",
     "REQUIRED DOCUMENTS",
     ...(tender.required_documents || []).map((doc, i) => (i + 1) + ". " + doc),
@@ -123,7 +123,6 @@ export function makeRfpPdfBase64(tender) {
     for (let i = 0; i < text.length; i += 92) lines.push(text.slice(i, i + 92));
   }
 
-  const pageHeight = 842;
   const top = 790;
   const lineHeight = 17;
   const maxLines = Math.floor((top - 48) / lineHeight);
@@ -134,10 +133,9 @@ export function makeRfpPdfBase64(tender) {
   const objects = [];
   const pageRefs = [];
   const fontObj = 3 + pages.length * 2;
-  const catalogObj = 1;
   const pagesObj = 2;
 
-  objects[catalogObj] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[pagesObj] = null;
 
   for (let i = 0; i < pages.length; i++) {
@@ -145,31 +143,49 @@ export function makeRfpPdfBase64(tender) {
     const contentObj = pageObj + 1;
     pageRefs.push(pageObj + " 0 R");
 
-    const commands = ["BT", "/F1 14 Tf", "50 800 Td", "(" + clean(pages[i][0] || "RFP document") + ") Tj", "/F1 10 Tf"];
+    const commands = [
+      "BT",
+      "/F1 14 Tf",
+      "50 800 Td",
+      "(" + clean(pages[i][0] || "RFP document") + ") Tj",
+      "/F1 10 Tf"
+    ];
     for (let j = 1; j < pages[i].length; j++) {
       commands.push("0 -17 Td", "(" + clean(pages[i][j]) + ") Tj");
     }
     commands.push("ET");
+
     const stream = commands.join("\n");
-    objects[contentObj] = "<< /Length " + Buffer.byteLength(stream, "latin1") + " >>\\nstream\\n" + stream + "\\nendstream";
-    objects[pageObj] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 " + fontObj + " 0 R >> >> /Contents " + contentObj + " 0 R >>";
+    objects[contentObj] =
+      "<< /Length " + Buffer.byteLength(stream, "latin1") + " >>\nstream\n" +
+      stream + "\nendstream";
+    objects[pageObj] =
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
+      "/Resources << /Font << /F1 " + fontObj + " 0 R >> >> " +
+      "/Contents " + contentObj + " 0 R >>";
   }
 
-  objects[pagesObj] = "<< /Type /Pages /Kids [" + pageRefs.join(" ") + "] /Count " + pages.length + " >>";
+  objects[pagesObj] =
+    "<< /Type /Pages /Kids [" + pageRefs.join(" ") + "] /Count " + pages.length + " >>";
   objects[fontObj] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
 
-  let pdf = "%PDF-1.4\\n";
+  let pdf = "%PDF-1.4\n";
   const offsets = [0];
   for (let i = 1; i < objects.length; i++) {
     offsets[i] = Buffer.byteLength(pdf, "latin1");
-    pdf += i + " 0 obj\\n" + objects[i] + "\\nendobj\\n";
+    pdf += i + " 0 obj\n" + objects[i] + "\nendobj\n";
   }
+
   const xref = Buffer.byteLength(pdf, "latin1");
-  pdf += "xref\\n0 " + objects.length + "\\n0000000000 65535 f \\n";
+  pdf += "xref\n0 " + objects.length + "\n";
+  pdf += "0000000000 65535 f \n";
   for (let i = 1; i < objects.length; i++) {
-    pdf += String(offsets[i]).padStart(10, "0") + " 00000 n \\n";
+    pdf += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
   }
-  pdf += "trailer\\n<< /Size " + objects.length + " /Root 1 0 R >>\\nstartxref\\n" + xref + "\\n%%EOF";
+  pdf +=
+    "trailer\n<< /Size " + objects.length + " /Root 1 0 R >>\n" +
+    "startxref\n" + xref + "\n%%EOF";
+
   return Buffer.from(pdf, "latin1").toString("base64");
 }
 
