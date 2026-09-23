@@ -142,22 +142,50 @@ def extract_requirements(text: str) -> Dict[str, Any]:
 
 
 def validate_document(filename: str, content_type: Optional[str], data: bytes) -> Dict[str, Any]:
+    """Validate a bidder PDF and expose extracted evidence for checklist matching."""
     checks = [
         {"name": "File present", "passed": bool(data)},
         {"name": "PDF extension", "passed": filename.lower().endswith(".pdf")},
         {"name": "Readable PDF", "passed": False},
     ]
+    text = ""
+    pages = 0
     if data and filename.lower().endswith(".pdf"):
         try:
             import fitz
             doc = fitz.open(stream=data, filetype="pdf")
-            checks[2]["passed"] = len(doc) > 0
+            pages = len(doc)
+            text = "\n".join((page.get_text("text") or "") for page in doc).strip()
+            checks[2]["passed"] = pages > 0
             doc.close()
         except Exception:
             pass
+
+    lowered = text.lower()
+    aliases = {
+        "GST certificate": ["gst registration", "gstin", "goods and services tax"],
+        "PAN card": ["pan card", "pan number", "permanent account number"],
+        "Udyam/MSME certificate": ["udyam", "msme"],
+        "Experience certificate": ["experience certificate", "years of relevant experience"],
+        "Work order": ["work order"],
+        "Financial statement": ["financial statement", "turnover"],
+        "Balance sheet": ["balance sheet"],
+        "Certificate of incorporation": ["certificate of incorporation", "incorporation"],
+        "EMD / Bid Security proof": ["emd", "bid security"],
+        "Authorization / OEM certificate": ["oem authorization", "oem certificate", "manufacturer authorization"],
+        "ISO certificate": ["iso 9001", "iso certificate"],
+    }
+    detected_documents = [
+        label for label, needles in aliases.items()
+        if any(needle in lowered for needle in needles)
+    ]
+
     return {
         "document": filename,
         "content_type": content_type,
+        "pages": pages,
+        "text": text,
+        "detected_documents": detected_documents,
         "status": "valid" if all(c["passed"] for c in checks) else "needs_review",
         "checks": checks,
     }
