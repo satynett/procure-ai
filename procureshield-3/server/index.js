@@ -53,7 +53,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const app = express();
 app.set("trust proxy", true);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(requireAuth);
 
 const VALID_VERIFICATION_STATUSES = ["Verified", "Needs Review", "Rejected"];
@@ -283,6 +283,213 @@ app.get("/api/tenders/:id", asyncRoute(async (req, res) => {
   if (!tender) return res.status(404).json({ message: "Tender not found" });
   res.json({ tender: decorateTender(tender, bids, bidders) });
 }));
+
+function tenderManagementPayload(tender, bids, bidders, view = null) {
+  const tenderBids = bids
+    .filter((b) => b.tender_id === tender.tender_id)
+    .map((bid) => {
+      const bidder = bidders.find((x) => x.bidder_id === bid.bidder_id);
+      const risk = view?.riskMap?.[bid.bidder_id] || {};
+      return {
+        ...decorateBid(bid, bidders, view || { riskMap: {} }),
+        bidder_email: bidder?.email || "—",
+        bidder_phone: bidder?.phone || "—",
+        gst_number: bidder?.gst_number || "—",
+        pan_number: bidder?.pan_number || "—",
+        udyam_status: bidder?.msme_status || "—",
+        bidder_address: bidder?.address || "—",
+        quoted_amount: Number(bid.bid_amount || 0),
+        government_estimated_value: Number(tender.estimated_value || 0),
+        award_amount: tender.award_amount || (tender.winner_bid_id === bid.bid_id ? bid.bid_amount : null),
+        risk_score: risk.score ?? 0,
+        risk_category: risk.category ?? "Low",
+      };
+    })
+    .sort((a, b) => new Date(a.submission_date || 0) - new Date(b.submission_date || 0));
+
+  return {
+    tender: {
+      ...decorateTender(tender, bids, bidders),
+      lifecycle: tender.status,
+      award_amount: tender.award_amount || null,
+      winner_bid_id: tender.winner_bid_id || null,
+      rfp_text: tender.rfp_text || "",
+      rfp_content_base64: tender.rfp_content_base64 || null,
+    },
+    bids: tenderBids,
+    stats: {
+      total_bids: tenderBids.length,
+      verified: tenderBids.filter((b) => b.verification_status === "Verified").length,
+      needs_review: tenderBids.filter((b) => b.verification_status === "Needs Review").length,
+      rejected: tenderBids.filter((b) => b.verification_status === "Rejected").length,
+      lowest_quote: tenderBids.length ? Math.min(...tenderBids.map((b) => b.quoted_amount || Infinity)) : null,
+      highest_quote: tenderBids.length ? Math.max(...tenderBids.map((b) => b.quoted_amount || 0)) : null,
+    },
+  };
+}
+
+app.get("/api/officer/tenders/:id", asyncRoute(async (req, res) => {
+  const tenderId = decodeURIComponent(req.params.id);
+  const tender = getTenders().find((t) => t.tender_id === tenderId);
+  if (!tender) return res.status(404).json({ message: "Tender not found" });
+  const bidders = getBidders();
+  const bids = getBids();
+  let view = null;
+  try { view = await getAnalysis(); } catch { view = { riskMap: {} }; }
+  res.json(tenderManagementPayload(tender, bids, bidders, view));
+}));
+
+app.post("/api/officer/tenders", asyncRoute(async (req, res) => {
+  const {
+    title,
+    department,
+    category,
+    deadline,
+    estimated_value,
+    publish = false,
+    rfp_filename,
+    rfp_content_base64,
+  } = req.body || {};
+
+  if (!title || !department || !deadline || !rfp_content_base64) {
+    return res.status(400).json({ message: "Title, department, deadline and an RFP PDF are required." });
+  }
+
+  const rfp = await intelligencePdf({
+    filename: rfp_filename || "tender-rfp.pdf",
+    content_base64: rfp_content_base64,
+    content_type: "application/pdf",
+  });
+
+  if (rfp.extraction_status !== "success") {
+    return res.status(400).json({ message: rfp.message || "RFP could not be read." });
+  }
+
+  const parsed = rfp.requirements || {};
+  const allRequirements = [
+    ...(parsed.eligibility_requirements || []),
+    ...(parsed.technical_requirements || []),
+  ];
+
+  const eligibilitySummary = allRequirements
+    .map((x) => x.requirement)
+    .filter(Boolean)
+    .slice(0, 8)
+    .join(", ") || "Officer review required before publication.";
+
+  const tenders = getTenders();
+  const year = new Date().getFullYear();
+  const sequence = String(tenders.length + 1).padStart(4, "0");
+  const tenderId = `GEM/${year}/T/${sequence}`;
+
+  const tender = {
+    tender_id: tenderId,
+    title: String(title).trim(),
+    department: String(department).trim(),
+    category: String(category || "General Procurement").trim(),
+    status: publish ? "Open" : "Draft",
+    deadline: String(deadline),
+    estimated_value: Number(estimated_value || 0),
+    rfp_filename: rfp_filename || "tender-rfp.pdf",
+    rfp_content_base64,
+    rfp_text: rfp.text || "",
+    eligibility_summary: eligibilitySummary,
+    eligibility_requirements: parsed.eligibility_requirements || [],
+    technical_requirements: parsed.technical_requirements || [],
+    required_documents: parsed.required_documents || [],
+    important_dates: parsed.important_dates || [],
+    parser: parsed.parser || "deterministic-prototype",
+    created_at: new Date().toISOString(),
+    published_at: publish ? new Date().toISOString() : null,
+  };
+
+  tenders.unshift(tender);
+  writeJson("tenders.json", tenders);
+  appendAuditLog({
+    id: `AUD-${Date.now()}`,
+    officer: "Procurement Officer 01",
+    action: publish ? "Tender Published" : "Tender Created as Draft",
+    tender_id: tenderId,
+    timestamp: new Date().toISOString(),
+    rfp_filename: tender.rfp_filename,
+  });
+
+  res.status(201).json({ tender: decorateTender(tender, getBids(), getBidders()) });
+}));
+
+app.patch("/api/officer/tenders/:id", (req, res) => {
+  const tenderId = decodeURIComponent(req.params.id);
+  const tenders = getTenders();
+  const idx = tenders.findIndex((t) => t.tender_id === tenderId);
+  if (idx === -1) return res.status(404).json({ message: "Tender not found" });
+
+  const tender = { ...tenders[idx] };
+  const action = req.body?.action;
+  const allowed = ["publish", "close", "withdraw", "award"];
+  if (!allowed.includes(action)) return res.status(400).json({ message: "Unknown tender action." });
+
+  if (action === "publish") {
+    if (!tender.rfp_content_base64) return res.status(400).json({ message: "An RFP must be uploaded before publishing." });
+    tender.status = "Open";
+    tender.published_at = new Date().toISOString();
+  }
+
+  if (action === "close") {
+    tender.status = "Closed";
+    tender.closing_date = new Date().toISOString().slice(0, 10);
+  }
+
+  if (action === "withdraw") {
+    if (["Awarded", "Closed"].includes(tender.status)) {
+      return res.status(400).json({ message: "Closed or awarded tenders cannot be withdrawn." });
+    }
+    tender.status = "Withdrawn";
+  }
+
+  if (action === "award") {
+    const bid = getBids().find((b) => b.bid_id === req.body?.bid_id && b.tender_id === tenderId);
+    if (!bid) return res.status(400).json({ message: "Select a valid bid for this tender." });
+    tender.status = "Awarded";
+    tender.closing_date = tender.closing_date || new Date().toISOString().slice(0, 10);
+    tender.award_date = new Date().toISOString().slice(0, 10);
+    tender.winner_bid_id = bid.bid_id;
+    tender.award_amount = Number(req.body?.award_amount || bid.bid_amount || 0);
+  }
+
+  tenders[idx] = tender;
+  writeJson("tenders.json", tenders);
+  appendAuditLog({
+    id: `AUD-${Date.now()}`,
+    officer: "Procurement Officer 01",
+    action: `Tender ${action}`,
+    tender_id: tenderId,
+    bid_id: req.body?.bid_id || null,
+    timestamp: new Date().toISOString(),
+    award_amount: tender.award_amount || null,
+  });
+
+  res.json({ tender: decorateTender(tender, getBids(), getBidders()) });
+});
+
+app.delete("/api/officer/tenders/:id", (req, res) => {
+  const tenderId = decodeURIComponent(req.params.id);
+  const tenders = getTenders();
+  const idx = tenders.findIndex((t) => t.tender_id === tenderId);
+  if (idx === -1) return res.status(404).json({ message: "Tender not found" });
+  if (!["Draft", "Withdrawn"].includes(tenders[idx].status)) {
+    return res.status(400).json({ message: "Only draft or withdrawn tenders can be permanently removed. Use withdraw for an active tender." });
+  }
+  const removed = tenders.splice(idx, 1)[0];
+  writeJson("tenders.json", tenders);
+  appendAuditLog({
+    id: `AUD-${Date.now()}`,
+    officer: "Procurement Officer 01",
+    action: "Tender Permanently Removed",
+    tender_id: tenderId,
+    timestamp: new Date().toISOString(),
+  });
+  res.json({ success: true, removed: removed.tender_id });
+});
 
 app.post("/api/bidder/bids", (req, res) => {
   const { tender_id, company_name, documents = [], bid_amount = null } = req.body || {};
