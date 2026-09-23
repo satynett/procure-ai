@@ -1,14 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { api } from "../api.js";
-
-const fallbackTender = {
-  eligibility_requirements: [
-    { requirement: "Minimum 3 years experience", type: "experience", mandatory: true },
-    { requirement: "Valid GST registration", type: "tax", mandatory: true },
-    { requirement: "PAN information", type: "identity", mandatory: true },
-  ],
-  required_documents: ["GST certificate", "PAN card", "Experience certificate"],
-};
+import { ArrowLeft, FileCheck2, UploadCloud, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function encodeFile(file) {
   return new Promise((resolve, reject) => {
@@ -20,263 +13,84 @@ function encodeFile(file) {
 }
 
 function Status({ value }) {
-  const cls = value === "pass" ? "bg-emerald-50 text-emerald-700"
+  const cls = value === "valid" || value === "pass" ? "bg-emerald-50 text-emerald-700"
     : value === "missing" ? "bg-red-50 text-red-700"
-    : value === "needs_review" ? "bg-amber-50 text-amber-700"
-    : "bg-slate-100 text-slate-600";
-  const label = value === "pass" ? "✓ Complete" : value === "missing" ? "✕ Missing" : value === "needs_review" ? "⚠ Review" : "Pending";
-  return <span className={"rounded-full px-2.5 py-1 text-xs font-semibold " + cls}>{label}</span>;
+    : "bg-amber-50 text-amber-700";
+  const label = value === "valid" || value === "pass" ? "✓ Looks valid" : value === "missing" ? "✕ Missing" : "⚠ Needs review";
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
 }
 
 export default function BidIntelligence() {
-  const [file, setFile] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
-  const [bidderFiles, setBidderFiles] = useState([]);
-  const [documentChecks, setDocumentChecks] = useState([]);
-  const [bidder, setBidder] = useState({
-    company_name: "", pan: "", gstin: "", years_experience: "", turnover: "", udyam: "", documents: []
-  });
-  const [eligibility, setEligibility] = useState(null);
+  const navigate = useNavigate();
+  const [files, setFiles] = useState([]);
+  const [checks, setChecks] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const requirements = analysis?.requirements || fallbackTender;
-  const canCheck = useMemo(() => bidder.company_name.trim().length > 0, [bidder.company_name]);
-
-  async function analyzeTender() {
-    if (!file) return;
-    setBusy(true); setError("");
-    try {
-      const content_base64 = await encodeFile(file);
-      const result = await api.intelligencePdf({ filename: file.name, content_base64 });
-      setAnalysis(result); setEligibility(null);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
-  }
-
-  async function validateBidderDocuments() {
-    if (!bidderFiles.length) return;
-    if (!analysis) {
-      setError("Upload and analyze the RFP first so the bidder documents can be checked against its checklist.");
-      return;
-    }
-    setBusy(true); setError("");
+  async function checkDocuments() {
+    if (!files.length) return;
+    setBusy(true); setError(""); setChecks([]);
     try {
       const results = [];
-      for (const doc of bidderFiles) {
-        const content_base64 = await encodeFile(doc);
+      for (const file of files) {
+        const content_base64 = await encodeFile(file);
         const result = await api.intelligenceValidateDocument({
-          filename: doc.name,
-          content_type: doc.type || "application/pdf",
+          filename: file.name,
+          content_type: file.type || "application/pdf",
           content_base64
         });
-        results.push({ ...result, filename: doc.name });
+        results.push({ ...result, filename: file.name });
       }
-      setDocumentChecks(results);
-
-      const text = results.map(r => r.text || "").join("\n").toLowerCase();
-      const get = (re) => {
-        const m = text.match(re);
-        return m ? m[1] : "";
-      };
-      const detectedDocs = Array.from(new Set(results.flatMap(r => r.detected_documents || [])));
-      const nextBidder = {
-        ...bidder,
-        gstin: get(/gstin\s*[:\-]?\s*([0-9]{2}[a-z0-9]{5}\d{4}[a-z]\d[a-z]\w)/i),
-        pan: get(/pan(?:\s*(?:number|no\.?)?)?\s*[:\-]?\s*([a-z]{5}\d{4}[a-z])/i),
-        udyam: get(/udyam(?:\s*registration(?:\s*number)?)?\s*[:\-]?\s*([a-z0-9\-]+)/i),
-        years_experience: get(/(\d+)\s+years?\s+(?:of\s+)?(?:relevant\s+)?(?:experience|relevant experience)/i) || get(/experience[^\d]{0,30}(\d+)\s+years?/i),
-        turnover: get(/(?:average annual turnover|turnover)[^₹\d]{0,20}(?:₹|rs\.?|i)?\s*([\d,.]+)\s*(?:lakh|crore)?/i),
-        documents: detectedDocs,
-      };
-      if (!nextBidder.company_name) {
-        nextBidder.company_name = get(/bidder\s*[:\-]\s*([^\n]+)/i) || get(/company\s*name\s*[:\-]\s*([^\n]+)/i);
-      }
-      if (nextBidder.turnover) nextBidder.turnover = Number(String(nextBidder.turnover).replace(/,/g, "")) || "";
-      if (nextBidder.years_experience) nextBidder.years_experience = Number(nextBidder.years_experience) || "";
-      setBidder(nextBidder);
-
-      const result = await api.intelligenceEligibility({
-        tender: analysis.requirements || fallbackTender,
-        bidder: {
-          ...nextBidder,
-          years_experience: nextBidder.years_experience === "" ? null : Number(nextBidder.years_experience),
-          turnover: nextBidder.turnover === "" ? null : Number(nextBidder.turnover),
-        },
-      });
-      setEligibility(result);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+      setChecks(results);
+    } catch (e) {
+      setError(e.message || "Document check failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function checkEligibility() {
-    setBusy(true); setError("");
-    try {
-      const result = await api.intelligenceEligibility({
-        tender: requirements,
-        bidder: {
-          ...bidder,
-          years_experience: bidder.years_experience === "" ? null : Number(bidder.years_experience),
-          turnover: bidder.turnover === "" ? null : Number(bidder.turnover),
-        },
-      });
-      setEligibility(result);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
-  }
+  const valid = checks.filter((c) => c.status === "valid").length;
+  const review = checks.length - valid;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">North-Star Prototype</div>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">Bid Intelligence</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Tender document → requirements → bidder documents → eligibility pre-check. Network risk remains powered by the existing analytics engine.
-        </p>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex items-start gap-3">
+        <button onClick={() => navigate("/bidder")} className="rounded-lg border border-slate-200 bg-white p-2"><ArrowLeft size={17}/></button>
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Bidder Portal</div>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Check My Documents</h1>
+          <p className="mt-1 text-sm text-slate-500">Upload your own documents to check whether they look complete and valid before bidding.</p>
+        </div>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">1. RFP & Bidder Document Upload</h2>
-        <p className="mt-1 text-sm text-slate-500">Upload the tender first, then upload bidder documents for verification.</p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">RFP / Tender</div>
-            <h3 className="mt-1 font-semibold text-slate-900">Generate checklist</h3>
-            <input type="file" accept=".pdf,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="mt-4 block w-full text-sm" />
-            <button disabled={!file || busy} onClick={analyzeTender} className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-              {busy ? "Analyzing..." : "Extract & Analyze"}
-            </button>
-            {analysis && (
-              <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
-                <b>{analysis.filename}</b>
-                <div className="text-slate-500">{analysis.pages} page(s)</div>
-              </div>
-            )}
-          </div>
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
+          <div><h2 className="font-semibold">Document self-check</h2><p className="mt-1 text-sm text-slate-500">This page does not ask for an RFP. RFPs are uploaded and published by procurement officers.</p></div>
+        </div>
 
-          <div className="rounded-lg border border-slate-200 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">Bidder Documents</div>
-            <h3 className="mt-1 font-semibold text-slate-900">Upload supporting documents</h3>
-            <input type="file" accept=".pdf,application/pdf" multiple onChange={e => setBidderFiles(Array.from(e.target.files || []))} className="mt-4 block w-full text-sm" />
-            {bidderFiles.length > 0 && (
-              <div className="mt-3 space-y-1">
-                {bidderFiles.map((doc, i) => <div key={i} className="text-sm text-slate-700">📄 {doc.name}</div>)}
-              </div>
-            )}
-            <button disabled={!bidderFiles.length || busy} onClick={validateBidderDocuments} className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-              {busy ? "Checking..." : "Check Bidder Documents"}
-            </button>
-            {documentChecks.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {documentChecks.map((doc, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                    <span>{doc.filename}</span>
-                    <Status value={doc.status === "valid" ? "pass" : "needs_review"} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="mt-5 rounded-lg border-2 border-dashed border-slate-200 p-8 text-center">
+          <UploadCloud className="mx-auto text-slate-400" size={28}/>
+          <h3 className="mt-2 font-semibold">Upload your documents</h3>
+          <p className="mt-1 text-sm text-slate-500">GST, PAN, Udyam, experience, turnover, ISO, OEM authorization, EMD and other supporting PDFs.</p>
+          <input type="file" multiple accept=".pdf,.doc,.docx" onChange={e=>setFiles(Array.from(e.target.files||[]))} className="mx-auto mt-4 block max-w-md text-sm"/>
+          {files.length>0 && <div className="mx-auto mt-3 max-w-lg space-y-1 text-left">{files.map((f,i)=><div key={i} className="rounded bg-slate-50 px-3 py-2 text-sm">📄 {f.name}</div>)}</div>}
+          <button disabled={!files.length||busy} onClick={checkDocuments} className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy?"Checking…":"Check My Documents"}</button>
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">2. Extracted requirements</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {(requirements.eligibility_requirements || []).map((r, i) => (
-            <div key={i} className="rounded-lg border border-slate-200 p-3">
-              <div className="text-sm font-medium text-slate-800">{r.requirement}</div>
-              <div className="mt-1 text-xs text-slate-500">{r.type} · {r.mandatory ? "mandatory" : "detected requirement"}</div>
-            </div>
-          ))}
-          {(requirements.required_documents || []).map((d, i) => (
-            <div key={"d-" + i} className="rounded-lg border border-slate-200 p-3 text-sm">📄 {d}</div>
-          ))}
-          {(requirements.technical_requirements || []).map((r, i) => (
-            <div key={"t-" + i} className="rounded-lg border border-slate-200 p-3">
-              <div className="text-sm font-medium text-slate-800">{r.requirement}</div>
-              <div className="mt-1 text-xs text-slate-500">{r.type} · {r.mandatory ? "mandatory" : "detected requirement"}</div>
-            </div>
-          ))}
+      {checks.length>0 && <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div><h2 className="font-semibold">Document check results</h2><p className="mt-1 text-sm text-slate-500">These are pre-bid review signals, not a final procurement decision.</p></div>
+          <div className="text-sm font-semibold">{valid}/{checks.length} look valid</div>
         </div>
-        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live compliance checklist</div>
-              <div className="mt-1 text-sm text-slate-500">RFP requirements matched against the uploaded bidder evidence.</div>
-            </div>
-            {eligibility && (
-              <div className="text-sm font-bold text-slate-900">
-                {eligibility.checks.filter(c => c.status === "pass").length}/{eligibility.checks.length} complete
-              </div>
-            )}
-          </div>
-          <div className="mt-3 space-y-2">
-            {eligibility ? eligibility.checks.map((item, i) => (
-              <div key={"c-" + i} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                <div>
-                  <div className="text-sm font-medium text-slate-700">{item.requirement}</div>
-                  <div className="mt-0.5 text-xs text-slate-500">{item.evidence}</div>
-                </div>
-                <Status value={item.status} />
-              </div>
-            )) : (
-              <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-500">
-                Upload bidder documents and click <b>Check Bidder Documents</b>.
-              </div>
-            )}
-          </div>
-        </div>
-        <p className="mt-4 text-xs text-amber-700">Prototype extraction is deterministic and explainable; human review is required before procurement decisions.</p>
-      </section>
+        <div className="mt-4 space-y-2">{checks.map((doc,i)=><div key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3"><div><div className="text-sm font-medium">{doc.filename}</div><div className="mt-1 text-xs text-slate-500">{doc.detected_documents?.join(", ") || doc.message || "Document inspected."}</div></div><Status value={doc.status}/></div>)}</div>
+        {review>0 && <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800"><AlertTriangle size={15}/> Review the flagged documents and correct them before submitting a bid.</div>}
+      </section>}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">3. Bidder eligibility pre-check</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {[
-            ["company_name", "Company name"], ["pan", "PAN"], ["gstin", "GSTIN"],
-            ["udyam", "Udyam"], ["years_experience", "Years of experience"], ["turnover", "Turnover"],
-          ].map(([key, label]) => (
-            <label key={key} className="text-sm text-slate-600">{label}
-              <input value={bidder[key]} onChange={e => setBidder({ ...bidder, [key]: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
-            </label>
-          ))}
-        </div>
-        <label className="mt-4 block text-sm text-slate-600">Documents supplied (comma separated)
-          <input value={bidder.documents.join(", ")}
-            onChange={e => setBidder({ ...bidder, documents: e.target.value.split(",").map(x => x.trim()).filter(Boolean) })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-        </label>
-        <button disabled={!canCheck || busy} onClick={checkEligibility}
-          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-          Run self-check
-        </button>
-
-        {eligibility && (
-          <div className="mt-5 rounded-lg border border-slate-200 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><div className="text-xs text-slate-500">Eligibility pre-check</div><div className="text-xl font-bold">{eligibility.eligibility_score}%</div></div>
-              <div className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">{eligibility.status}</div>
-            </div>
-            <div className="mt-4 space-y-2">
-              {eligibility.checks.map((c, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
-                  <span className="text-sm">{c.requirement}<span className="ml-2 text-xs text-slate-500">{c.evidence}</span></span>
-                  <Status value={c.status} />
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-amber-700">{eligibility.message}</p>
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-slate-900">4. Network risk</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          The existing Graph/GNN engine stays isolated. Use Risk Analysis or Bidder Network for network evidence and review-priority scoring.
-        </p>
-      </section>
+      <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">Sandbox prototype. The officer-published RFP is only visible from a tender's details; bidders cannot upload or replace the RFP.</div>
     </div>
   );
 }
