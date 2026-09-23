@@ -74,6 +74,29 @@ function getBidders() {
 function getBids() {
   return readJson("bids.json");
 }
+function getTenders() {
+  try {
+    return readJson("tenders.json");
+  } catch {
+    return [];
+  }
+}
+
+function decorateTender(tender, bids, bidders) {
+  const tenderBids = bids.filter((b) => b.tender_id === tender.tender_id);
+  const winnerBid = tender.status === "Awarded" && tenderBids.length
+    ? tenderBids.slice().sort((a, b) => Number(a.bid_amount || Infinity) - Number(b.bid_amount || Infinity))[0]
+    : null;
+  const winner = winnerBid ? bidders.find((b) => b.bidder_id === winnerBid.bidder_id) : null;
+  return {
+    ...tender,
+    bid_count: tenderBids.length,
+    winner_name: winner?.company_name || null,
+    winner_bid_id: winnerBid?.bid_id || null,
+    award_amount: winnerBid?.bid_amount || null,
+  };
+}
+
 function getAuditLog() {
   try {
     return readJson("auditLog.json");
@@ -231,6 +254,59 @@ app.get("/api/dashboard", asyncRoute(async (req, res) => {
     disclaimer: view.disclaimer,
   });
 }));
+
+
+// ---------------------------------------------------------------------
+// Shared tender lifecycle for bidder + officer portals
+// ---------------------------------------------------------------------
+app.get("/api/tenders", asyncRoute(async (req, res) => {
+  const bidders = getBidders();
+  const bids = getBids();
+  const tenders = getTenders().map((t) => decorateTender(t, bids, bidders));
+  const status = req.query.status;
+  const filtered = status ? tenders.filter((t) => t.status.toLowerCase() === String(status).toLowerCase()) : tenders;
+  res.json({
+    tenders: filtered,
+    counts: {
+      open: tenders.filter((t) => t.status === "Open").length,
+      awarded: tenders.filter((t) => t.status === "Awarded").length,
+    },
+    disclaimer: "Demo tender lifecycle; data is synthetic sandbox data."
+  });
+}));
+
+app.get("/api/tenders/:id", asyncRoute(async (req, res) => {
+  const bidders = getBidders();
+  const bids = getBids();
+  const tenderId = decodeURIComponent(req.params.id);
+  const tender = getTenders().find((t) => t.tender_id === tenderId);
+  if (!tender) return res.status(404).json({ message: "Tender not found" });
+  res.json({ tender: decorateTender(tender, bids, bidders) });
+}));
+
+app.post("/api/bidder/bids", (req, res) => {
+  const { tender_id, company_name, documents = [], bid_amount = null } = req.body || {};
+  const tender = getTenders().find((t) => t.tender_id === tender_id);
+  if (!tender || tender.status !== "Open") return res.status(400).json({ message: "This tender is not open for bidding." });
+  if (!company_name?.trim()) return res.status(400).json({ message: "Company name is required." });
+
+  const bids = getBids();
+  const sequence = bids.length + 1;
+  const bid = {
+    bid_id: `DEMO/BID/2026/${String(sequence).padStart(4, "0")}`,
+    tender_id,
+    bidder_id: "BIDDER-DEMO",
+    bidder_company_name: company_name.trim(),
+    category: tender.category,
+    bid_amount: bid_amount ? Number(bid_amount) : null,
+    submission_date: new Date().toISOString().slice(0, 10),
+    verification_status: "Needs Review",
+    submitted_documents: documents.map((d) => typeof d === "string" ? d : d.name).filter(Boolean),
+  };
+  bids.push(bid);
+  writeJson("bids.json", bids);
+  res.status(201).json({ success: true, bid });
+});
 
 // ---------------------------------------------------------------------
 // Bids
