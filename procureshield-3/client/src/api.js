@@ -46,6 +46,7 @@ export const api = {
   updateTender: (tenderId, payload) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteTender: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "DELETE" }),
   submitBid: (payload) => request("/bidder/bids", { method: "POST", body: JSON.stringify(payload) }),
+  bidderBids: () => request("/bidder/bids"),
   bids: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     return request(`/bids?${qs.toString()}`);
