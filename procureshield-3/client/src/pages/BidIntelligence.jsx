@@ -28,6 +28,8 @@ function Status({ value }) {
 export default function BidIntelligence() {
   const [file, setFile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [bidderFiles, setBidderFiles] = useState([]);
+  const [documentChecks, setDocumentChecks] = useState([]);
   const [bidder, setBidder] = useState({
     company_name: "", pan: "", gstin: "", years_experience: "", turnover: "", udyam: "", documents: []
   });
@@ -45,6 +47,24 @@ export default function BidIntelligence() {
       const content_base64 = await encodeFile(file);
       const result = await api.intelligencePdf({ filename: file.name, content_base64 });
       setAnalysis(result); setEligibility(null);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+
+  async function validateBidderDocuments() {
+    if (!bidderFiles.length) return;
+    setBusy(true); setError("");
+    try {
+      const results = [];
+      for (const file of bidderFiles) {
+        const content_base64 = await encodeFile(file);
+        const result = await api.intelligenceValidateDocument({
+          filename: file.name,
+          content_type: file.type || "application/pdf",
+          content_base64,
+        });
+        results.push({ ...result, filename: file.name });
+      }
+      setDocumentChecks(results);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -186,4 +206,140 @@ export default function BidIntelligence() {
       </section>
     </div>
   );
-}
+}      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold text-slate-900">1. Document intake</h2>
+        <p className="mt-1 text-sm text-slate-500">First upload the tender/RFP, then upload the bidder documents against the generated requirements.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">RFP / Tender Document</div>
+            <h3 className="mt-1 font-semibold text-slate-900">Generate compliance checklist</h3>
+            <p className="mt-1 text-sm text-slate-500">Upload the tender PDF to extract eligibility, technical and document requirements.</p>
+            <input type="file" accept=".pdf,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="mt-4 block w-full text-sm" />
+            <button disabled={!file || busy} onClick={analyzeTender} className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              {busy ? "Analyzing..." : "Extract & Analyze"}
+            </button>
+            {analysis && (
+              <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm">
+                <div className="font-medium text-slate-800">{analysis.filename}</div>
+                <div className="mt-1 text-slate-500">{analysis.pages} page(s) · {analysis.ocr_required ? "OCR may be required" : "Text extraction available"}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">Bidder Documents</div>
+            <h3 className="mt-1 font-semibold text-slate-900">Upload supporting documents</h3>
+            <p className="mt-1 text-sm text-slate-500">Upload GST, PAN, Udyam, experience, financial, ISO, OEM and other bidder documents.</p>
+            <input type="file" accept=".pdf,application/pdf" multiple onChange={e => setBidderFiles(Array.from(e.target.files || []))} className="mt-4 block w-full text-sm" />
+            {bidderFiles.length > 0 && (
+              <div className="mt-3 space-y-1">
+                {bidderFiles.map((f, i) => <div key={i} className="text-sm text-slate-700">📄 {f.name}</div>)}
+              </div>
+            )}
+            <button disabled={!bidderFiles.length || busy} onClick={validateBidderDocuments} className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              {busy ? "Checking..." : "Check Bidder Documents"}
+            </button>
+            {documentChecks.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {documentChecks.map((d, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                    <span className="truncate pr-3">{d.filename}</span>
+                    <Status value={d.status === "valid" ? "pass" : "needs_review"} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {analysis && (
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="font-semibold text-slate-900">2. Extracted requirements & compliance checklist</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(requirements.eligibility_requirements || []).map((r, i) => (
+              <div key={i} className="rounded-lg border border-slate-200 p-3">
+                <div className="text-sm font-medium text-slate-800">{r.requirement}</div>
+                <div className="mt-1 text-xs text-slate-500">{r.type} · {r.mandatory ? "mandatory" : "detected requirement"}</div>
+              </div>
+            ))}
+            {(requirements.required_documents || []).map((d, i) => (
+              <div key={"d-" + i} className="rounded-lg border border-slate-200 p-3 text-sm">📄 {d}</div>
+            ))}
+          </div>
+          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Compliance checklist</div>
+            <div className="mt-3 space-y-2">
+              {[
+                ...(requirements.eligibility_requirements || []),
+                ...(requirements.technical_requirements || []),
+                ...(requirements.required_documents || []).map(document => ({ requirement: "Document: " + document, type: "document" })),
+              ].map((item, i) => {
+                const name = String(item.requirement || "").toLowerCase();
+                const uploaded = bidderFiles.some(f => {
+                  const n = f.name.toLowerCase();
+                  return (name.includes("gst") && n.includes("gst")) ||
+                    (name.includes("pan") && n.includes("pan")) ||
+                    (name.includes("udyam") && n.includes("udyam")) ||
+                    (name.includes("experience") && n.includes("experience")) ||
+                    (name.includes("work order") && n.includes("work")) ||
+                    (name.includes("financial") && n.includes("financial")) ||
+                    (name.includes("balance") && n.includes("balance")) ||
+                    (name.includes("incorporation") && n.includes("incorpor")) ||
+                    (name.includes("emd") && (n.includes("emd") || n.includes("bid"))) ||
+                    (name.includes("authorization") && (n.includes("oem") || n.includes("author"))) ||
+                    (name.includes("iso") && n.includes("iso"));
+                });
+                return (
+                  <div key={"c-" + i} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                    <span className="text-sm text-slate-700">{item.requirement}</span>
+                    <span className={uploaded ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-amber-700"}>
+                      {uploaded ? "Document uploaded" : "Pending bidder document"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-amber-700">Document upload checks file presence/readability; official procurement verification still requires human review and external evidence.</p>
+        </section>
+      )}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold text-slate-900">3. Bidder eligibility pre-check</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {[
+            ["company_name", "Company name"], ["pan", "PAN"], ["gstin", "GSTIN"],
+            ["udyam", "Udyam"], ["years_experience", "Years of experience"], ["turnover", "Turnover"],
+          ].map(([key, label]) => (
+            <label key={key} className="text-sm text-slate-600">{label}
+              <input value={bidder[key]} onChange={e => setBidder({ ...bidder, [key]: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" />
+            </label>
+          ))}
+        </div>
+        <button disabled={!canCheck || busy} onClick={checkEligibility}
+          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          Run self-check
+        </button>
+
+        {eligibility && (
+          <div className="mt-5 rounded-lg border border-slate-200 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div><div className="text-xs text-slate-500">Eligibility pre-check</div><div className="text-xl font-bold">{eligibility.eligibility_score}%</div></div>
+              <div className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">{eligibility.status}</div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {eligibility.checks.map((c, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
+                  <span className="text-sm">{c.requirement}<span className="ml-2 text-xs text-slate-500">{c.evidence}</span></span>
+                  <Status value={c.status} />
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-amber-700">{eligibility.message}</p>
+          </div>
+        )}
+      </section>
+
+
