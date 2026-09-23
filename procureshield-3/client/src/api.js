@@ -41,6 +41,10 @@ export const api = {
   dashboard: () => request("/dashboard"),
   tenders: (status = "") => request(`/tenders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
   tenderDetail: (tenderId) => request(`/tenders/${encodeURIComponent(tenderId)}`),
+  officerTenderDetail: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`),
+  createTender: (payload) => request("/officer/tenders", { method: "POST", body: JSON.stringify(payload) }),
+  updateTender: (tenderId, payload) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteTender: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "DELETE" }),
   submitBid: (payload) => request("/bidder/bids", { method: "POST", body: JSON.stringify(payload) }),
   bids: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
