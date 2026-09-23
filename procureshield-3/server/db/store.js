@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import pg from "pg";
 import { seedData, makeRfpPdfBase64 } from "./seed.js";
+import { initGovernmentSandbox } from "../sandbox/governmentSeed.js";
 
 const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
@@ -46,6 +47,8 @@ export async function initDatabase({ seed=true }={}) {
     }
     await refreshCache(collection);
   }
+
+  await initGovernmentSandbox(pool, getCollection("bidders"), { seed });
 
   // Existing demo rows were originally stored as plain-text base64.
   // Convert only those rows to real PDF bytes; never touch an already uploaded PDF.
