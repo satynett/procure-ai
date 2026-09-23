@@ -76,10 +76,42 @@ def extract_requirements(text: str) -> Dict[str, Any]:
         ("gst", "GST certificate"), ("pan", "PAN card"), ("udyam", "Udyam/MSME certificate"),
         ("experience certificate", "Experience certificate"), ("work order", "Work order"),
         ("financial statement", "Financial statement"), ("balance sheet", "Balance sheet"),
-        ("incorporation", "Certificate of incorporation"),
+        ("incorporation", "Certificate of incorporation"), ("emd", "EMD / Bid Security proof"),
+        ("authorization", "Authorization / OEM certificate"), ("iso", "ISO certificate"),
     ]:
         if needle in lowered and label not in required_documents:
             required_documents.append(label)
+
+    # Common technical/commercial clauses. These are deliberately deterministic
+    # so the prototype stays explainable and does not invent requirements.
+    technical_requirements: List[Dict[str, Any]] = []
+    clause_patterns = [
+        (r"(?:delivery|completion)[^.\\n]{0,100}(?:within|in)\\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
+        (r"(?:bid validity|validity of bid)[^.\\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
+        (r"(?:emd|earnest money deposit)[^.\\n]{0,80}(?:rs\\.?|₹)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
+        (r"(?:iso)[^.\\n]{0,60}(9001|14001|45001)", "certification"),
+        (r"(?:oem|original equipment manufacturer)[^.\\n]{0,80}(?:authorization|certificate)", "oem"),
+    ]
+    for pattern, kind in clause_patterns:
+        match = re.search(pattern, source, flags=re.I)
+        if not match:
+            continue
+        if kind == "delivery":
+            description = f"Delivery/completion within {match.group(1)} {match.group(2)}"
+        elif kind == "bid_validity":
+            description = f"Bid validity: {match.group(1)} {match.group(2)}"
+        elif kind == "emd":
+            description = f"EMD / Bid Security: {match.group(1)} {match.group(2) or ''}".strip()
+        elif kind == "certification":
+            description = f"ISO {match.group(1)} certification"
+        else:
+            description = "OEM authorization/certificate required"
+        technical_requirements.append({
+            "requirement": description,
+            "type": kind,
+            "mandatory": any(word in lowered for word in ("mandatory", "shall", "must")),
+            "source": "deterministic-prototype-parser",
+        })
 
     dates = re.findall(
         r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}\s+"
@@ -95,8 +127,10 @@ def extract_requirements(text: str) -> Dict[str, Any]:
         "tender_title": title,
         "eligibility_requirements": requirements,
         "required_documents": required_documents,
-        "technical_requirements": [],
-        "financial_requirements": [r for r in requirements if r["type"] == "turnover"],
+        "technical_requirements": technical_requirements,
+        "financial_requirements": [r for r in requirements if r["type"] == "turnover"] + [
+            r for r in technical_requirements if r["type"] == "emd"
+        ],
         "important_dates": dates[:20],
         "parser": "deterministic-prototype",
         "llm_configured": False,
