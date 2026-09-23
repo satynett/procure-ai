@@ -132,19 +132,106 @@ function TenderCard({tender:t,onOpen,onBid}) {
   </article>;
 }
 
-function TenderModal({tender:t,submitting,company,setCompany,bidAmount,setBidAmount,documents,setDocuments,onClose,onSubmit}) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-    <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex items-start justify-between gap-3"><div><div className="text-xs font-semibold text-brand-600">{t.tender_id}</div><h2 className="mt-1 text-xl font-bold">{t.title}</h2><p className="mt-1 text-sm text-slate-500">{t.department} · {t.category}</p></div><button onClick={onClose}><X size={20}/></button></div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <Info label="Status" value={t.status}/><Info label={t.status==="Open"?"Deadline":"Closing date"} value={t.deadline||t.closing_date}/>
-        <Info label="Bids" value={String(t.bid_count||0)}/><Info label="RFP uploaded by" value="Procurement Officer"/>
+function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, onClose, onSubmit }) {
+  const isAwarded = t.status === "Awarded";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold text-brand-600">{t.tender_id}</div>
+            <h2 className="mt-1 text-xl font-bold">{t.title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t.department} · {t.category}</p>
+          </div>
+          <button onClick={onClose}><X size={20}/></button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Info label="Status" value={t.status}/>
+          <Info label={isAwarded ? "Closing date" : "Deadline"} value={t.deadline || t.closing_date}/>
+          <Info label="Bids" value={String(t.bid_count || 0)}/>
+          <Info label="RFP uploaded by" value="Procurement Officer"/>
+        </div>
+
+        <div className="mt-5 rounded-lg bg-slate-50 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Officer RFP</div>
+          <div className="mt-1 font-medium">{t.rfp_filename || "Officer-uploaded tender document"}</div>
+          <p className="mt-1 text-sm text-slate-500">
+            {t.eligibility_summary || "Tender requirements are available in the officer-published RFP."}
+          </p>
+        </div>
+
+        {isAwarded && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Award outcome</div>
+            <div className="mt-1 text-lg font-bold">{t.winner_name || "Demo award record"}</div>
+            <div className="text-sm text-slate-500">
+              Award date: {t.award_date || "—"}
+              {t.award_amount && (
+                <span> · Award amount: ₹{Number(t.award_amount).toLocaleString("en-IN")}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!isAwarded && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Required documents</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(t.required_documents || []).map((d) => (
+                <span key={d} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs">{d}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {submitting && !isAwarded && (
+          <div className="mt-5 border-t border-slate-200 pt-5">
+            <h3 className="font-semibold">Submit your bid documents</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              The RFP stays with the officer. You upload only your company bid documents here.
+            </p>
+            <input
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Company name"
+              className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+            <input
+              value={bidAmount}
+              onChange={(e) => setBidAmount(e.target.value)}
+              placeholder="Quoted amount (optional)"
+              type="number"
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx"
+              onChange={(e) => setDocuments(Array.from(e.target.files || []))}
+              className="mt-3 w-full text-sm"
+            />
+            <button
+              onClick={onSubmit}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
+            >
+              <Upload size={15}/> Submit Bid
+            </button>
+          </div>
+        )}
+
+        {t.status === "Open" && !submitting && (
+          <button
+            onClick={onClose}
+            className="mt-5 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            Click “Bid Now” to submit your documents
+          </button>
+        )}
       </div>
-      <div className="mt-5 rounded-lg bg-slate-50 p-4"><div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Officer RFP</div><div className="mt-1 font-medium">{t.rfp_filename||"Officer-uploaded tender document"}</div><p className="mt-1 text-sm text-slate-500">{t.eligibility_summary||"Tender requirements are available in the officer-published RFP."}</p></div>
-      {t.status==="Awarded" ? (<div className="mt-4 rounded-lg border border-slate-200 p-4"><div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Award outcome</div><div className="mt-1 text-lg font-bold">{t.winner_name||"Demo award record"}</div><div className="text-sm text-slate-500">Award date: {t.award_date||"—"}{t.award_amount ? ` · Award amount: ₹${Number(t.award_amount).toLocaleString("en-IN")}` : ""}</div></div>) : (<div className="mt-4 rounded-lg border border-slate-200 p-4"><div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Required documents</div><div className="mt-2 flex flex-wrap gap-2">{(t.required_documents||[]).map(d=><span key={d} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs">{d}</span>)}</div></div>)}
-      {submitting&&t.status==="Open"&&<div className="mt-5 border-t border-slate-200 pt-5"><h3 className="font-semibold">Submit your bid documents</h3><p className="mt-1 text-sm text-slate-500">The RFP stays with the officer. You upload only your company bid documents here.</p><input value={company} onChange={e=>setCompany(e.target.value)} placeholder="Company name" className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"/><input value={bidAmount} onChange={e=>setBidAmount(e.target.value)} placeholder="Quoted amount (optional)" type="number" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"/><input type="file" multiple accept=".pdf,.doc,.docx" onChange={e=>setDocuments(Array.from(e.target.files||[]))} className="mt-3 w-full text-sm"/><button onClick={onSubmit} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"><Upload size={15}/> Submit Bid</button></div>}
-      {t.status==="Open"&&!submitting&&<button onClick={()=>{}} className="mt-5 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white">Click “Bid Now” to submit your documents</button>}
     </div>
-  </div>;
+  );
 }
+
 function Info({label,value}){return <div className="rounded-lg border border-slate-200 p-3"><div className="text-xs text-slate-400">{label}</div><div className="mt-1 text-sm font-semibold">{value}</div></div>}
