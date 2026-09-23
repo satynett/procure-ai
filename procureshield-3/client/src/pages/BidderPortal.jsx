@@ -281,7 +281,7 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
 
 function Info({label,value}){return <div className="rounded-lg border border-slate-200 p-3"><div className="text-xs text-slate-400">{label}</div><div className="mt-1 text-sm font-semibold">{value}</div></div>}
 
-function RfpViewer({ tender }) {
+function RfpViewer({ tender: t }) {
   const [open, setOpen] = useState(false);
   const base64 = tender.rfp_content_base64 || "";
   const isPdf = base64.startsWith("JVBERi0");
