@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import pg from "pg";
 import { seedData } from "./seed.js";
 
