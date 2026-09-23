@@ -39,6 +39,9 @@ export const api = {
   login: (username, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }),
   dashboard: () => request("/dashboard"),
+  tenders: (status = "") => request(`/tenders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+  tenderDetail: (tenderId) => request(`/tenders/${encodeURIComponent(tenderId)}`),
+  submitBid: (payload) => request("/bidder/bids", { method: "POST", body: JSON.stringify(payload) }),
   bids: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     return request(`/bids?${qs.toString()}`);
