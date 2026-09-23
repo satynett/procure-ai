@@ -1141,6 +1141,31 @@ app.get("/api/health", asyncRoute(async (req, res) => {
   res.json({ status: "ok", demo: true, engine });
 }));
 
+app.post("/api/intelligence/ai-document-check", asyncRoute(async (req, res) => {
+  const { filename, document_text, requirements = [], tender_id = null } = req.body || {};
+  if (!document_text) return res.status(400).json({ message: "document_text is required." });
+  const result = await analyzeBidderDocumentWithAI({ filename, documentText: document_text, requirements });
+  await appendAuditLog({
+    id: `AUD-${Date.now()}`,
+    officer: "Procurement Officer 01",
+    action: "AI Bidder Document Analysis",
+    tender_id,
+    timestamp: new Date().toISOString(),
+    ai_provider: result.provider || "openrouter",
+    ai_model: result.model || process.env.OPENROUTER_MODEL || "openrouter/free",
+    document: filename || "bidder-document",
+    result_counts: {
+      matched: (result.checks || []).filter((x) => x.status === "matched").length,
+      mismatch: (result.checks || []).filter((x) => x.status === "mismatch").length,
+      missing: (result.checks || []).filter((x) => x.status === "missing").length,
+      needs_review: (result.checks || []).filter((x) => x.status === "needs_review").length,
+    },
+    advisory: true,
+    comment: "AI interpretation only; deterministic compliance and officer review remain final."
+  });
+  res.json(result);
+}));
+
 app.use("/api", (req, res) => {
   res.status(404).json({ message: `No route for ${req.method} ${req.originalUrl}` });
 });
