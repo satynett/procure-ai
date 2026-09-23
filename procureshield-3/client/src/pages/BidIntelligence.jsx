@@ -21,8 +21,11 @@ function encodeFile(file) {
 
 function Status({ value }) {
   const cls = value === "pass" ? "bg-emerald-50 text-emerald-700"
-    : value === "missing" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
-  return <span className={"rounded-full px-2 py-1 text-xs font-semibold " + cls}>{value}</span>;
+    : value === "missing" ? "bg-red-50 text-red-700"
+    : value === "needs_review" ? "bg-amber-50 text-amber-700"
+    : "bg-slate-100 text-slate-600";
+  const label = value === "pass" ? "✓ Complete" : value === "missing" ? "✕ Missing" : value === "needs_review" ? "⚠ Review" : "Pending";
+  return <span className={"rounded-full px-2.5 py-1 text-xs font-semibold " + cls}>{label}</span>;
 }
 
 export default function BidIntelligence() {
@@ -52,6 +55,10 @@ export default function BidIntelligence() {
 
   async function validateBidderDocuments() {
     if (!bidderFiles.length) return;
+    if (!analysis) {
+      setError("Upload and analyze the RFP first so the bidder documents can be checked against its checklist.");
+      return;
+    }
     setBusy(true); setError("");
     try {
       const results = [];
@@ -65,6 +72,38 @@ export default function BidIntelligence() {
         results.push({ ...result, filename: doc.name });
       }
       setDocumentChecks(results);
+
+      const text = results.map(r => r.text || "").join("\n").toLowerCase();
+      const get = (re) => {
+        const m = text.match(re);
+        return m ? m[1] : "";
+      };
+      const detectedDocs = Array.from(new Set(results.flatMap(r => r.detected_documents || [])));
+      const nextBidder = {
+        ...bidder,
+        gstin: get(/gstin\s*[:\-]?\s*([0-9]{2}[a-z0-9]{5}\d{4}[a-z]\d[a-z]\w)/i),
+        pan: get(/pan(?:\s*(?:number|no\.?)?)?\s*[:\-]?\s*([a-z]{5}\d{4}[a-z])/i),
+        udyam: get(/udyam(?:\s*registration(?:\s*number)?)?\s*[:\-]?\s*([a-z0-9\-]+)/i),
+        years_experience: get(/(\d+)\s+years?\s+(?:of\s+)?(?:relevant\s+)?(?:experience|relevant experience)/i) || get(/experience[^\d]{0,30}(\d+)\s+years?/i),
+        turnover: get(/(?:average annual turnover|turnover)[^₹\d]{0,20}(?:₹|rs\.?|i)?\s*([\d,.]+)\s*(?:lakh|crore)?/i),
+        documents: detectedDocs,
+      };
+      if (!nextBidder.company_name) {
+        nextBidder.company_name = get(/bidder\s*[:\-]\s*([^\n]+)/i) || get(/company\s*name\s*[:\-]\s*([^\n]+)/i);
+      }
+      if (nextBidder.turnover) nextBidder.turnover = Number(String(nextBidder.turnover).replace(/,/g, "")) || "";
+      if (nextBidder.years_experience) nextBidder.years_experience = Number(nextBidder.years_experience) || "";
+      setBidder(nextBidder);
+
+      const result = await api.intelligenceEligibility({
+        tender: analysis.requirements || fallbackTender,
+        bidder: {
+          ...nextBidder,
+          years_experience: nextBidder.years_experience === "" ? null : Number(nextBidder.years_experience),
+          turnover: nextBidder.turnover === "" ? null : Number(nextBidder.turnover),
+        },
+      });
+      setEligibility(result);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -160,18 +199,31 @@ export default function BidIntelligence() {
           ))}
         </div>
         <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Compliance checklist</div>
-          <div className="mt-3 space-y-2">
-            {[
-              ...(requirements.eligibility_requirements || []),
-              ...(requirements.technical_requirements || []),
-              ...(requirements.required_documents || []).map(document => ({ requirement: "Document: " + document, type: "document" })),
-            ].map((item, i) => (
-              <div key={"c-" + i} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                <span className="text-sm text-slate-700">{item.requirement}</span>
-                <span className="text-xs font-semibold text-amber-700">Pending bidder check</span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live compliance checklist</div>
+              <div className="mt-1 text-sm text-slate-500">RFP requirements matched against the uploaded bidder evidence.</div>
+            </div>
+            {eligibility && (
+              <div className="text-sm font-bold text-slate-900">
+                {eligibility.checks.filter(c => c.status === "pass").length}/{eligibility.checks.length} complete
               </div>
-            ))}
+            )}
+          </div>
+          <div className="mt-3 space-y-2">
+            {eligibility ? eligibility.checks.map((item, i) => (
+              <div key={"c-" + i} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                <div>
+                  <div className="text-sm font-medium text-slate-700">{item.requirement}</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{item.evidence}</div>
+                </div>
+                <Status value={item.status} />
+              </div>
+            )) : (
+              <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-500">
+                Upload bidder documents and click <b>Check Bidder Documents</b>.
+              </div>
+            )}
           </div>
         </div>
         <p className="mt-4 text-xs text-amber-700">Prototype extraction is deterministic and explainable; human review is required before procurement decisions.</p>
