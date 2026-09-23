@@ -368,7 +368,7 @@ app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
   res.status(201).json({tender:decorateTender(tender,getBids(),getBidders())});
 }));
 
-app.patch("/api/officer/tenders/:id",async (req,res)=>{
+app.patch("/api/officer/tenders/:id",asyncRoute(async (req,res)=>{
   const tenderId=decodeURIComponent(req.params.id); const tenders=getTenders(); const idx=tenders.findIndex(t=>t.tender_id===tenderId);
   if(idx===-1) return res.status(404).json({message:"Tender not found"}); const tender={...tenders[idx]}; const action=req.body?.action;
   if(!["publish","close","withdraw","award"].includes(action)) return res.status(400).json({message:"Unknown tender action."});
@@ -380,17 +380,17 @@ app.patch("/api/officer/tenders/:id",async (req,res)=>{
   tenders[idx]=tender;await writeJson("tenders.json",tenders);
   await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:`Tender ${action}`,tender_id:tenderId,bid_id:req.body?.bid_id||null,timestamp:new Date().toISOString(),award_amount:tender.award_amount||null});
   res.json({tender:decorateTender(tender,getBids(),getBidders())});
-});
+}););
 
-app.delete("/api/officer/tenders/:id",async (req,res)=>{
+app.delete("/api/officer/tenders/:id",asyncRoute(async (req,res)=>{
   const tenderId=decodeURIComponent(req.params.id);const tenders=getTenders();const idx=tenders.findIndex(t=>t.tender_id===tenderId);
   if(idx===-1)return res.status(404).json({message:"Tender not found"});if(!["Draft","Withdrawn"].includes(tenders[idx].status))return res.status(400).json({message:"Only draft or withdrawn tenders can be permanently removed. Use withdraw for an active tender."});
   tenders.splice(idx,1);await writeJson("tenders.json",tenders);await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:"Tender Permanently Removed",tender_id:tenderId,timestamp:new Date().toISOString()});
   res.json({success:true,removed:tenderId});
-});
+}););
 
 
-app.post("/api/bidder/bids", async (req, res) => {
+app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
   const {
     tender_id,
     company_name,
@@ -457,7 +457,7 @@ app.post("/api/bidder/bids", async (req, res) => {
     success: true,
     bid,
   });
-});
+}););
 
 // ---------------------------------------------------------------------
 // Bidder bid history
