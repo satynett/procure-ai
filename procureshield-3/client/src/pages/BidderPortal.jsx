@@ -283,7 +283,7 @@ function Info({label,value}){return <div className="rounded-lg border border-sla
 
 function RfpViewer({ tender: t }) {
   const [open, setOpen] = useState(false);
-  const base64 = tender.rfp_content_base64 || "";
+  const base64 = t.rfp_content_base64 || "";
   const isPdf = base64.startsWith("JVBERi0");
   const pdfUrl = isPdf ? "data:application/pdf;base64," + base64 : null;
   return (
