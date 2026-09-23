@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import pg from "pg";
-import { seedData } from "./seed.js";
+import { seedData, makeRfpPdfBase64 } from "./seed.js";
 
 const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
@@ -46,10 +46,31 @@ export async function initDatabase({ seed=true }={}) {
     }
     await refreshCache(collection);
   }
+
+  // Existing demo rows were originally stored as plain-text base64.
+  // Convert only those rows to real PDF bytes; never touch an already uploaded PDF.
+  const tenderRows = getCollection("tenders");
+  let migrated = 0;
+  for (const tender of tenderRows) {
+    const base64 = String(tender.rfp_content_base64 || "");
+    if (!base64 || base64.startsWith("JVBERi0")) continue;
+
+    const pdfBase64 = makeRfpPdfBase64(tender);
+    await pool.query(
+      "UPDATE procure_tenders SET data = jsonb_set(data, '{rfp_content_base64}', to_jsonb($1::text), true), updated_at = NOW() WHERE tender_id = $2",
+      [pdfBase64, tender.tender_id]
+    );
+    migrated += 1;
+  }
+  if (migrated) {
+    console.log("PostgreSQL: converted " + migrated + " demo RFPs into PDF documents.");
+    await refreshCache("tenders");
+  }
 }
 
 export async function refreshCache(collection) {
-  const result=await pool.query("SELECT data FROM " + TABLES[collection] + " ORDER BY updated_at DESC");
+  const orderColumn = collection === "auditLog" ? "created_at" : "updated_at";
+  const result=await pool.query("SELECT data FROM " + TABLES[collection] + " ORDER BY " + orderColumn + " DESC");
   cache.set(collection,result.rows.map(r=>r.data));
 }
 
