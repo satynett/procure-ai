@@ -47,6 +47,7 @@ export const api = {
   deleteTender: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "DELETE" }),
   submitBid: (payload) => request("/bidder/bids", { method: "POST", body: JSON.stringify(payload) }),
   bidderBids: () => request("/bidder/bids"),
+  governmentVerification: (bidderId) => request(`/gov/verify/${encodeURIComponent(bidderId)}`),
   bids: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     return request(`/bids?${qs.toString()}`);
