@@ -387,7 +387,7 @@ app.delete("/api/officer/tenders/:id",asyncRoute(async (req,res)=>{
   if(idx===-1)return res.status(404).json({message:"Tender not found"});if(!["Draft","Withdrawn"].includes(tenders[idx].status))return res.status(400).json({message:"Only draft or withdrawn tenders can be permanently removed. Use withdraw for an active tender."});
   tenders.splice(idx,1);await writeJson("tenders.json",tenders);await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:"Tender Permanently Removed",tender_id:tenderId,timestamp:new Date().toISOString()});
   res.json({success:true,removed:tenderId});
-}););
+}));
 
 
 app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
@@ -457,7 +457,7 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
     success: true,
     bid,
   });
-}););
+}));
 
 // ---------------------------------------------------------------------
 // Bidder bid history
