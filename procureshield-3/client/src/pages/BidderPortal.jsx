@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileCheck2, ArrowRight, ShieldCheck, FileText, Upload, X } from "lucide-react";
+import { Search, FileCheck2, ArrowRight, ShieldCheck, FileText, Upload, X, History, ExternalLink } from "lucide-react";
 import { api } from "../api.js";
 
 export default function BidderPortal() {
@@ -11,6 +11,7 @@ export default function BidderPortal() {
   const [category, setCategory] = useState("");
   const [selected, setSelected] = useState(null);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [company, setCompany] = useState("");
   const [bidAmount, setBidAmount] = useState("");
   const [documents, setDocuments] = useState([]);
@@ -20,10 +21,9 @@ export default function BidderPortal() {
   const load = async () => {
     setError("");
     try {
-      const [openRes, closedRes] = await Promise.all([api.tenders("Open"), api.tenders("Awarded")]);
+      const [openRes, closedRes, historyRes] = await Promise.all([api.tenders("Open"), api.tenders("Awarded"), api.bidderBids()]);
       setTenders([...(openRes.tenders || []), ...(closedRes.tenders || [])]);
-      const stored = JSON.parse(sessionStorage.getItem("ps_my_bids") || "[]");
-      setMyBids(stored);
+      setMyBids(historyRes.bids || []);
     } catch (e) { setError(e.message || "Unable to load tenders."); }
   };
 
@@ -53,9 +53,7 @@ export default function BidderPortal() {
         bid_amount: bidAmount || null,
         documents: documents.map((f) => f.name),
       });
-      const next = [result.bid, ...myBids];
-      sessionStorage.setItem("ps_my_bids", JSON.stringify(next));
-      setMyBids(next);
+      await load();
       setMessage(`Bid ${result.bid.bid_id} submitted successfully. Status: Under Review.`);
       setShowSubmit(false);
       setDocuments([]);
@@ -70,6 +68,7 @@ export default function BidderPortal() {
           <div><div className="text-lg font-bold">ProcureShield</div><div className="text-xs text-slate-500">Bidder Portal</div></div>
           <div className="flex gap-2">
             <button onClick={() => navigate("/bidder/documents")} className="flex items-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white"><FileCheck2 size={16}/> Check My Documents</button>
+            <button onClick={() => setShowHistory(true)} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-brand-300"><History size={16}/> My Bids</button>
             <button onClick={() => navigate("/")} className="rounded-lg px-3 py-2 text-sm text-slate-500">Switch portal</button>
           </div>
         </div>
@@ -118,7 +117,8 @@ export default function BidderPortal() {
         </section>
       </main>
 
-      {selected && <TenderModal tender={selected} submitting={showSubmit} company={company} setCompany={setCompany} bidAmount={bidAmount} setBidAmount={setBidAmount} documents={documents} setDocuments={setDocuments} onClose={()=>{setSelected(null);setShowSubmit(false)}} onSubmit={submitBid}/>}
+      {selected && <TenderModal tender={selected} submitting={showSubmit} company={company} setCompany={setCompany} bidAmount={bidAmount} setBidAmount={setBidAmount} documents={documents} setDocuments={setDocuments} onClose={()=>{setSelected(null);setShowSubmit(false)}} onStartSubmit={()=>setShowSubmit(true)} onSubmit={submitBid}/>}
+      {showHistory && <BidHistoryModal bids={myBids} onClose={()=>setShowHistory(false)}/>}
       <footer className="border-t border-slate-200 bg-white px-6 py-5 text-center text-xs text-slate-500">Prototype / sandbox data. The officer and bidder portals read the same tender and bid data.</footer>
     </div>
   );
@@ -183,7 +183,7 @@ function TenderCard({ tender:t, onOpen, onBid }) {
   );
 }
 
-function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, onClose, onSubmit }) {
+function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, onClose, onStartSubmit, onSubmit }) {
   const isAwarded = t.status === "Awarded";
 
   return (
@@ -205,13 +205,7 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
           <Info label="RFP uploaded by" value="Procurement Officer"/>
         </div>
 
-        <div className="mt-5 rounded-lg bg-slate-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Officer RFP</div>
-          <div className="mt-1 font-medium">{t.rfp_filename || "Officer-uploaded tender document"}</div>
-          <p className="mt-1 text-sm text-slate-500">
-            {t.eligibility_summary || "Tender requirements are available in the officer-published RFP."}
-          </p>
-        </div>
+        <RfpViewer tender={t} />
 
         {isAwarded && (
           <div className="mt-4 rounded-lg border border-slate-200 p-4">
@@ -274,7 +268,7 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
 
         {t.status === "Open" && !submitting && (
           <button
-            onClick={onClose}
+            onClick={onStartSubmit}
             className="mt-5 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
           >
             Click “Bid Now” to submit your documents
@@ -286,3 +280,60 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
 }
 
 function Info({label,value}){return <div className="rounded-lg border border-slate-200 p-3"><div className="text-xs text-slate-400">{label}</div><div className="mt-1 text-sm font-semibold">{value}</div></div>}
+
+function RfpViewer({ tender }) {
+  const [open, setOpen] = useState(false);
+  const base64 = tender.rfp_content_base64 || "";
+  const isPdf = base64.startsWith("JVBERi0");
+  const pdfUrl = isPdf ? "data:application/pdf;base64," + base64 : null;
+  return (
+    <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="w-full bg-slate-50 p-4 text-left hover:bg-slate-100">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Officer RFP</div>
+            <div className="mt-1 font-medium">{t.rfp_filename || "Officer-uploaded tender document"}</div>
+            <p className="mt-1 text-sm text-slate-500">{open ? "Click to hide the officer-uploaded RFP." : "Click to view the officer-uploaded RFP."}</p>
+          </div>
+          <ExternalLink size={18} className="mt-1 shrink-0 text-brand-600" />
+        </div>
+      </button>
+      {open && (
+        <div className="border-t border-slate-200 bg-white p-3">
+          {pdfUrl ? <iframe title={t.rfp_filename || "Officer RFP"} src={pdfUrl} className="h-[520px] w-full rounded-lg border border-slate-200" /> : <div className="rounded-lg bg-slate-50 p-4"><div className="text-sm font-semibold text-slate-700">RFP preview</div><pre className="mt-3 max-h-[520px] overflow-auto whitespace-pre-wrap text-sm leading-6 text-slate-600">{t.rfp_text || t.eligibility_summary || "No RFP preview is available."}</pre></div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BidHistoryModal({ bids, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4">
+      <div className="max-h-[88vh] w-full max-w-3xl overflow-auto rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div><div className="text-xs font-semibold uppercase tracking-wide text-brand-600">Bidder history</div><h2 className="mt-1 text-2xl font-bold">My Bids</h2><p className="mt-1 text-sm text-slate-500">Past submissions and their current verification status.</p></div>
+          <button onClick={onClose} aria-label="Close bid history"><X size={20}/></button>
+        </div>
+        <div className="mt-5 space-y-3">
+          {bids.length ? bids.map((bid) => {
+            const status = bid.verification_status || "Under Review";
+            const statusClass = status === "Verified" ? "bg-emerald-50 text-emerald-700" : status === "Rejected" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
+            return <div key={bid.bid_id} className="rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><div className="text-xs font-semibold text-brand-600">{bid.tender_id}</div><h3 className="mt-1 font-semibold">{bid.tender_title}</h3><div className="mt-1 text-xs text-slate-500">Bid ID: {bid.bid_id} · Submitted: {bid.submission_date || "—"}</div></div>
+                <span className={"rounded-full px-2.5 py-1 text-xs font-semibold " + statusClass}>{status}</span>
+              </div>
+              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Tender status</div><div className="mt-1 font-medium">{bid.tender_status || "—"}</div></div>
+                <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Bid amount</div><div className="mt-1 font-medium">{bid.bid_amount ? "₹" + Number(bid.bid_amount).toLocaleString("en-IN") : "Not provided"}</div></div>
+                <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Deadline</div><div className="mt-1 font-medium">{bid.tender_deadline || "—"}</div></div>
+              </div>
+              {bid.tender_status === "Awarded" && bid.winner_name && <div className="mt-3 text-xs text-slate-500">Recorded winner: {bid.winner_name}</div>}
+            </div>;
+          }) : <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No bids have been submitted from this bidder account yet.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
