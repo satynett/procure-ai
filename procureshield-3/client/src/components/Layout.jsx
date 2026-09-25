@@ -26,7 +26,6 @@ const NAV = [
   { to: "/app/bid-verification", label: "Bid Verification", icon: ShieldCheck },
   { to: "/app/bidder-network", label: "Bidder Network", icon: Share2 },
   { to: "/app/risk-analysis", label: "Risk Analysis", icon: AlertTriangle },
-  { to: "/app/alerts", label: "Alerts", icon: Bell },
   { to: "/app/reports", label: "Reports", icon: FileBarChart },
   { to: "/app/settings", label: "Settings", icon: SettingsIcon },
 ];
