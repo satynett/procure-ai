@@ -235,31 +235,47 @@ export default function BidIntelligence() {
         </select>
 
         {selectedTender && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Tender</div>
-              <div className="mt-1 text-sm font-semibold text-slate-800">{selectedTender.tender_id}</div>
-            </div>
-            <div className="rounded-lg bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Department</div>
-              <div className="mt-1 text-sm font-semibold text-slate-800">{selectedTender.department}</div>
-            </div>
-            <div className="rounded-lg bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Deadline</div>
-              <div className="mt-1 text-sm font-semibold text-slate-800">{selectedTender.deadline}</div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {selectedTender && (
         <>
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
+              <div>
+                <h2 className="font-semibold text-slate-900">1. Upload your supporting documents</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Upload your documents first. Multiple PDF, DOC and DOCX files are supported, with drag-and-drop and per-file validation.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <DocumentDropzone
+                files={files}
+                errors={uploadErrors}
+                onChange={(next, rejected) => {
+                  setFiles(next);
+                  setUploadErrors(rejected);
+                  setChecks([]);
+                  setAiAnalysis(null);
+                }}
+                label="Drag and drop your bid documents here"
+                hint="Upload GST, PAN, Udyam, experience, turnover, ISO, OEM, EMD and other supporting documents."
+              />
+              <button
+                disabled={!files.length || !selectedTender || busy}
+                onClick={checkDocuments}
+                className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busy ? "Checking documents…" : "Check Against This Tender"}
+              </button>
+            </div>
+          </section>
+
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><ShieldCheck size={20}/></div>
               <div>
-                <h2 className="font-semibold text-slate-900">1. What the RFP requires</h2>
-                <p className="mt-1 text-sm text-slate-500">Officer-published eligibility and supporting-document requirements for this tender.</p>
+                <h2 className="font-semibold text-slate-900">2. What the tender needs</h2>
+                <p className="mt-1 text-sm text-slate-500">The officer-published eligibility, technical and supporting-document requirements for this tender.</p>
               </div>
             </div>
 
@@ -290,61 +306,6 @@ export default function BidIntelligence() {
                   <span key={item} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">{item}</span>
                 ))}
               </div>
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-start justify-between gap-3 p-6">
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-slate-100 p-2 text-slate-700"><FileText size={20}/></div>
-                <div>
-                  <h2 className="font-semibold text-slate-900">2. Published RFP</h2>
-                  <p className="mt-1 text-sm text-slate-500">Inspect the actual officer-published tender document before checking your evidence.</p>
-                </div>
-              </div>
-              {rfpPdfUrl && (
-                <a href={rfpPdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
-                  Open PDF <ExternalLink size={14}/>
-                </a>
-              )}
-            </div>
-
-            <div className="border-t border-slate-200 bg-slate-50 p-3">
-              <div className="mb-2 px-1 text-xs font-medium text-slate-500">{selectedTender.rfp_filename || "Published RFP.pdf"}</div>
-              {rfpPdfUrl ? (
-                <iframe title={selectedTender.rfp_filename || "Published RFP"} src={rfpPdfUrl} className="h-[520px] w-full rounded-lg border border-slate-200 bg-white" />
-              ) : (
-                <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap rounded-lg bg-white p-4 text-sm leading-6 text-slate-600">
-                  {selectedTender.rfp_text || selectedTender.eligibility_summary || "No RFP preview is available."}
-                </pre>
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
-              <div>
-                <h2 className="font-semibold text-slate-900">3. Upload your supporting documents</h2>
-                <p className="mt-1 text-sm text-slate-500">Upload only your own evidence. Multiple PDF documents are supported, including GST, PAN, Udyam, experience, turnover, ISO, OEM and EMD documents.</p>
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <DocumentDropzone
-                files={files}
-                errors={uploadErrors}
-                onChange={(next, rejected) => { setFiles(next); setUploadErrors(rejected); setChecks([]); setAiAnalysis(null); }}
-                label="Drag and drop your bid documents here"
-                hint="Multiple documents supported. Invalid or unreadable files are rejected as Wrong document."
-              />
-              <button
-                disabled={!files.length || !selectedTender || busy}
-                onClick={checkDocuments}
-                className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {busy ? "Checking documents…" : "Check Against This Tender"}
-              </button>
             </div>
           </section>
         </>
@@ -387,10 +348,25 @@ export default function BidIntelligence() {
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="font-semibold text-slate-900">5. Document validation</h2>
-                <p className="mt-1 text-sm text-slate-500">Every uploaded file is checked for readability and procurement-document relevance.</p>
+                <h2 className="font-semibold text-slate-900">5. Match with sandbox data</h2>
+                <p className="mt-1 text-sm text-slate-500">The prototype compares detected bidder-document types with its synthetic sandbox procurement dataset and validation rules.</p>
               </div>
               <div className="text-sm font-semibold text-slate-700">{valid}/{checks.length} readable{wrong ? ` · ${wrong} wrong document${wrong !== 1 ? "s" : ""}` : ""}</div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg bg-slate-50 p-4">
+                <div className="text-xs text-slate-500">Sandbox documents detected</div>
+                <div className="mt-1 text-xl font-bold text-slate-900">{detected.length}</div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4">
+                <div className="text-xs text-slate-500">Readable uploads</div>
+                <div className="mt-1 text-xl font-bold text-slate-900">{valid}/{checks.length}</div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4">
+                <div className="text-xs text-slate-500">Sandbox validation</div>
+                <div className="mt-1 text-xl font-bold text-slate-900">{wrong ? "Needs attention" : "Passed"}</div>
+              </div>
             </div>
 
             <div className="mt-4 space-y-2">
@@ -406,11 +382,38 @@ export default function BidIntelligence() {
             </div>
           </section>
 
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-start justify-between gap-3 p-6">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-slate-100 p-2 text-slate-700"><FileText size={20}/></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">6. Actual published RFP</h2>
+                  <p className="mt-1 text-sm text-slate-500">Review the source tender document after seeing how your uploaded evidence matched the sandbox checklist.</p>
+                </div>
+              </div>
+              {rfpPdfUrl && (
+                <a href={rfpPdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
+                  Open PDF <ExternalLink size={14}/>
+                </a>
+              )}
+            </div>
+            <div className="border-t border-slate-200 bg-slate-50 p-3">
+              <div className="mb-2 px-1 text-xs font-medium text-slate-500">{selectedTender.rfp_filename || "Published RFP.pdf"}</div>
+              {rfpPdfUrl ? (
+                <iframe title={selectedTender.rfp_filename || "Published RFP"} src={rfpPdfUrl} className="h-[520px] w-full rounded-lg border border-slate-200 bg-white" />
+              ) : (
+                <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap rounded-lg bg-white p-4 text-sm leading-6 text-slate-600">
+                  {selectedTender.rfp_text || selectedTender.eligibility_summary || "No RFP preview is available."}
+                </pre>
+              )}
+            </div>
+          </section>
+
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><BrainCircuit size={20}/></div>
               <div>
-                <h2 className="font-semibold text-slate-900">6. AI analysis</h2>
+                <h2 className="font-semibold text-slate-900">7. AI analysis</h2>
                 <p className="mt-1 text-sm text-slate-500">A concise pre-bid explanation of what matched and what still needs attention.</p>
               </div>
             </div>
