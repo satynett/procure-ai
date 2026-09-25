@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";\nimport DocumentDropzone from "../components/DocumentDropzone.jsx";
+import { ArrowLeft, CheckCircle2, Loader2, UploadCloud } from "lucide-react";
+import DocumentDropzone from "../components/DocumentDropzone.jsx";
 import { api } from "../api.js";
 
 function encodeFile(file) {
@@ -15,7 +16,8 @@ function encodeFile(file) {
 export default function CreateTender() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ title:"", department:"", category:"IT Hardware", deadline:"", estimated_value:"" });
-  const [files, setFiles] = useState([]);\n  const [uploadErrors, setUploadErrors] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [uploadErrors, setUploadErrors] = useState([]);
   const [parsed, setParsed] = useState(null);
   const [busy, setBusy] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -41,7 +43,9 @@ export default function CreateTender() {
         required_documents: [...new Set([...(acc.required_documents || []), ...(item.required_documents || [])])],
         technical_requirements: [...(acc.technical_requirements || []), ...(item.technical_requirements || [])],
         important_dates: [...new Set([...(acc.important_dates || []), ...(item.important_dates || [])])],
-        rfp_text: [acc.rfp_text, item.rfp_text].filter(Boolean).join("\n\n"),
+        rfp_text: [acc.rfp_text, item.rfp_text].filter(Boolean).join("
+
+"),
       }), { eligibility_requirements: [], required_documents: [], technical_requirements: [], important_dates: [], rfp_text: "" });
       setParsed(combined);
       setMessage(`${files.length} RFP document${files.length !== 1 ? "s" : ""} analyzed. Review the extracted checklist before saving or publishing.`);
