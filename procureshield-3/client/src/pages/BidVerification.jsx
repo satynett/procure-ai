@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Filter, Loader2, ChevronRight, Download } from "lucide-react";
 import { api } from "../api.js";
 import { RiskBadge, StatusBadge } from "../components/Badges.jsx";
+import { downloadBidPdf } from "../utils/bidPdf.js";
 
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -110,13 +111,14 @@ export default function BidVerification() {
                 <th className="px-4 py-3">Submission Date</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Risk Score</th>
+                <th className="px-4 py-3">Bid PDF</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <Loader2 className="mx-auto animate-spin" />
                   </td>
                 </tr>
@@ -140,6 +142,19 @@ export default function BidVerification() {
                     <td className="whitespace-nowrap px-4 py-3 text-slate-500">{b.submission_date}</td>
                     <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={b.verification_status} /></td>
                     <td className="whitespace-nowrap px-4 py-3"><RiskBadge score={b.risk_score} category={b.risk_category} /></td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadBidPdf({ bid: b });
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:bg-brand-50"
+                        title="Download bid submission PDF"
+                      >
+                        <Download size={13} /> PDF
+                      </button>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600">
                         View Analysis <ChevronRight size={14} />
