@@ -151,7 +151,7 @@ export default function BidderNetwork() {
             <>
               <div className="mb-3">
                 <h2 className="text-sm font-semibold text-slate-800">Relationship Groups</h2>
-                <p className="mt-1 text-xs text-slate-500">The companies in each group are listed explicitly below.</p>
+                <p className="mt-1 text-xs text-slate-500">Each group is built from calculated relationship signals; unrelated bidders remain outside clusters.</p>
               </div>
               <div className="space-y-3">
                 {raw.clusters.map((cluster) => (
@@ -179,6 +179,28 @@ export default function BidderNetwork() {
                     </div>
                   </button>
                 ))}
+              </div>
+
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <div className="mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Other Bidders</h3>
+                  <p className="mt-1 text-[11px] text-slate-500">Companies with no linkable relationship signal in the current analysis.</p>
+                </div>
+                <div className="space-y-1.5">
+                  {raw.nodes
+                    .filter((node) => !node.cluster_id)
+                    .map((node) => (
+                      <button
+                        key={node.bidder_id}
+                        type="button"
+                        onClick={() => setSelectedCompany(node)}
+                        className="flex w-full items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-left hover:border-brand-200 hover:bg-slate-50"
+                      >
+                        <span className="min-w-0 truncate text-xs font-semibold text-slate-700">{node.company_name}</span>
+                        <span className="ml-2 text-[10px] font-medium text-slate-400">Standalone</span>
+                      </button>
+                    ))}
+                </div>
               </div>
             </>
           )}
