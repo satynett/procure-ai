@@ -138,6 +138,7 @@ export default function BidderPortal() {
               <div className="relative"><Search className="absolute left-3 top-2.5 text-slate-400" size={16}/><input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search" className="w-48 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm"/></div>
               <select value={category} onChange={(e)=>setCategory(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"><option value="">All categories</option>{categories.map(c=><option key={c}>{c}</option>)}</select>
             </div>
+            </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">{filteredOpen.map(t=><TenderCard key={t.tender_id} tender={t} onOpen={()=>{setSelected(t);setShowSubmit(false)}} onBid={()=>{setSelected(t);setShowSubmit(true)}} />)}</div>
         </section>
