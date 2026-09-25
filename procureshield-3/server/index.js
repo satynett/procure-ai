@@ -375,7 +375,7 @@ app.post("/api/bidder/bids", async (req, res) => {
     bidder_id: "BID-1001",
     bidder_company_name: company_name.trim(),
     category: tender.category,
-    bid_amount: bid_amount ? Number(bid_amount) : null,
+    bid_amount: amount,
     submission_date: new Date().toISOString().slice(0, 10),
     verification_status: "Needs Review",
     submitted_documents: documents.map((d) => typeof d === "string" ? d : d.name).filter(Boolean),
