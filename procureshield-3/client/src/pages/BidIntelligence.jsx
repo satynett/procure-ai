@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import { ArrowLeft, FileCheck2, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  FileCheck2,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  BrainCircuit,
+  ExternalLink,
+  ShieldCheck
+} from "lucide-react";
 import DocumentDropzone from "../components/DocumentDropzone.jsx";
 import { useNavigate } from "react-router-dom";
 
@@ -58,6 +68,8 @@ export default function BidIntelligence() {
   const [loadingTenders, setLoadingTenders] = useState(true);
   const [error, setError] = useState("");
   const [uploadErrors, setUploadErrors] = useState([]);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
     api.tenders("Open")
@@ -80,6 +92,8 @@ export default function BidIntelligence() {
     setBusy(true);
     setError("");
     setChecks([]);
+    setAiAnalysis(null);
+
     try {
       const results = [];
       for (const file of files) {
@@ -96,11 +110,13 @@ export default function BidIntelligence() {
             filename: file.name,
             status: "wrong_document",
             detected_documents: [],
+            text: "",
             message: e.message || "Wrong document: this file could not be validated."
           });
         }
       }
       setChecks(results);
+      await runAIAnalysis(results);
     } catch (e) {
       setError(e.message || "Document check failed.");
     } finally {
@@ -108,16 +124,85 @@ export default function BidIntelligence() {
     }
   }
 
+  async function runAIAnalysis(results) {
+    if (!selectedTender) return;
+    setAiBusy(true);
+
+    const readable = results.filter((item) => item.status === "valid");
+    const missingRequirements = (selectedTender.required_documents || []).filter((requirement) => {
+      const candidates = aliases[requirement] || [requirement];
+      return !readable.some((doc) =>
+        candidates.some((candidate) => (doc.detected_documents || []).includes(candidate))
+      );
+    });
+
+    try {
+      const documentText = readable
+        .map((doc) => `--- ${doc.filename} ---\n${doc.text || doc.detected_documents?.join(", ") || ""}`)
+        .join("\n\n")
+        .slice(0, 30000);
+
+      if (documentText) {
+        const result = await api.intelligenceAIDocumentCheck({
+          filename: readable.map((d) => d.filename).join(", "),
+          document_text: documentText,
+          requirements: selectedTender.required_documents || [],
+          tender_id: selectedTender.tender_id
+        });
+
+        setAiAnalysis({
+          ...(result || {}),
+          fallbackMissing: missingRequirements,
+          fallbackMatched: (selectedTender.required_documents || []).length - missingRequirements.length,
+          readableCount: readable.length,
+          wrongCount: results.filter((d) => d.status === "wrong_document").length
+        });
+      } else {
+        setAiAnalysis({
+          fallbackMissing: missingRequirements,
+          fallbackMatched: (selectedTender.required_documents || []).length - missingRequirements.length,
+          readableCount: readable.length,
+          wrongCount: results.filter((d) => d.status === "wrong_document").length,
+          message: "No readable bidder document was available for AI analysis."
+        });
+      }
+    } catch (e) {
+      setAiAnalysis({
+        fallbackMissing: missingRequirements,
+        fallbackMatched: (selectedTender.required_documents || []).length - missingRequirements.length,
+        readableCount: readable.length,
+        wrongCount: results.filter((d) => d.status === "wrong_document").length,
+        message: "AI analysis could not be completed. The checklist result above remains available."
+      });
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
   const detected = [...new Set(checks.flatMap((c) => c.detected_documents || []))];
   const checklist = (selectedTender?.required_documents || []).map((requirement) => {
     const candidates = aliases[requirement] || [requirement];
-    const matched = candidates.some((candidate) => detected.includes(candidate));
-    return { requirement, matched };
+    const evidence = checks.find((doc) =>
+      doc.status === "valid" &&
+      candidates.some((candidate) => (doc.detected_documents || []).includes(candidate))
+    );
+    return { requirement, matched: Boolean(evidence), evidence: evidence?.filename || "" };
   });
   const matched = checklist.filter((x) => x.matched).length;
   const missing = checklist.length - matched;
   const valid = checks.filter((c) => c.status === "valid").length;
   const wrong = checks.filter((c) => c.status === "wrong_document").length;
+
+  const rfpPdfUrl = selectedTender?.rfp_content_base64
+    ? `data:application/pdf;base64,${selectedTender.rfp_content_base64}`
+    : null;
+
+  const resetTender = (id) => {
+    setSelectedTenderId(id);
+    setChecks([]);
+    setAiAnalysis(null);
+    setUploadErrors([]);
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -128,17 +213,19 @@ export default function BidIntelligence() {
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Bidder Portal</div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">Check My Documents</h1>
-          <p className="mt-1 text-sm text-slate-500">Select the tender you are preparing for, then check your documents against that tender's published checklist.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Review the tender requirements, inspect the published RFP, then check your supporting documents before submission.
+          </p>
         </div>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Checking documents for tender</label>
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tender</label>
         <select
           value={selectedTenderId}
-          onChange={(e) => { setSelectedTenderId(e.target.value); setChecks([]); }}
+          onChange={(e) => resetTender(e.target.value)}
           disabled={loadingTenders}
           className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium"
         >
@@ -146,53 +233,143 @@ export default function BidIntelligence() {
             <option key={t.tender_id} value={t.tender_id}>{t.tender_id} — {t.title}</option>
           ))}
         </select>
+
         {selectedTender && (
-          <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
-            <div className="font-semibold text-slate-800">{selectedTender.title}</div>
-            <div className="mt-1 text-xs text-slate-500">{selectedTender.department} · Deadline {selectedTender.deadline}</div>
-            <div className="mt-2 text-xs text-slate-600">{selectedTender.eligibility_summary}</div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg bg-slate-50 p-3">
+              <div className="text-xs text-slate-500">Tender</div>
+              <div className="mt-1 text-sm font-semibold text-slate-800">{selectedTender.tender_id}</div>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-3">
+              <div className="text-xs text-slate-500">Department</div>
+              <div className="mt-1 text-sm font-semibold text-slate-800">{selectedTender.department}</div>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-3">
+              <div className="text-xs text-slate-500">Deadline</div>
+              <div className="mt-1 text-sm font-semibold text-slate-800">{selectedTender.deadline}</div>
+            </div>
           </div>
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
-          <div>
-            <h2 className="font-semibold">Tender-specific document check</h2>
-            <p className="mt-1 text-sm text-slate-500">The RFP remains officer-published. You upload only your own supporting documents.</p>
-          </div>
-        </div>
+      {selectedTender && (
+        <>
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><ShieldCheck size={20}/></div>
+              <div>
+                <h2 className="font-semibold text-slate-900">1. What the RFP requires</h2>
+                <p className="mt-1 text-sm text-slate-500">Officer-published eligibility and supporting-document requirements for this tender.</p>
+              </div>
+            </div>
 
-        <div className="mt-5">
-          <DocumentDropzone files={files} errors={uploadErrors}
-            onChange={(next, rejected) => { setFiles(next); setUploadErrors(rejected); setChecks([]); }}
-            label="Upload your bid documents"
-            hint="Drag and drop multiple GST, PAN, Udyam, experience, turnover, ISO, OEM, EMD and other supporting documents."
-          />
-          <button disabled={!files.length || !selectedTender || busy} onClick={checkDocuments} className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-            {busy ? "Checking…" : "Check Against This Tender"}
-          </button>
-        </div>
-      </section>
+            <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-800">{selectedTender.title}</div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{selectedTender.eligibility_summary}</p>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {(selectedTender.eligibility_requirements || []).map((item) => (
+                <div key={item} className="flex gap-2 rounded-lg border border-slate-100 p-3 text-sm text-slate-700">
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-brand-600"/>
+                  <span>{item}</span>
+                </div>
+              ))}
+              {(selectedTender.technical_requirements || []).map((item) => (
+                <div key={`technical-${item}`} className="flex gap-2 rounded-lg border border-slate-100 p-3 text-sm text-slate-700">
+                  <FileCheck2 size={16} className="mt-0.5 shrink-0 text-brand-600"/>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Required documents</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(selectedTender.required_documents || []).map((item) => (
+                  <span key={item} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">{item}</span>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-start justify-between gap-3 p-6">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-slate-100 p-2 text-slate-700"><FileText size={20}/></div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">2. Published RFP</h2>
+                  <p className="mt-1 text-sm text-slate-500">Inspect the actual officer-published tender document before checking your evidence.</p>
+                </div>
+              </div>
+              {rfpPdfUrl && (
+                <a href={rfpPdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
+                  Open PDF <ExternalLink size={14}/>
+                </a>
+              )}
+            </div>
+
+            <div className="border-t border-slate-200 bg-slate-50 p-3">
+              <div className="mb-2 px-1 text-xs font-medium text-slate-500">{selectedTender.rfp_filename || "Published RFP.pdf"}</div>
+              {rfpPdfUrl ? (
+                <iframe title={selectedTender.rfp_filename || "Published RFP"} src={rfpPdfUrl} className="h-[520px] w-full rounded-lg border border-slate-200 bg-white" />
+              ) : (
+                <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap rounded-lg bg-white p-4 text-sm leading-6 text-slate-600">
+                  {selectedTender.rfp_text || selectedTender.eligibility_summary || "No RFP preview is available."}
+                </pre>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
+              <div>
+                <h2 className="font-semibold text-slate-900">3. Upload your supporting documents</h2>
+                <p className="mt-1 text-sm text-slate-500">Upload only your own evidence. Multiple PDF documents are supported, including GST, PAN, Udyam, experience, turnover, ISO, OEM and EMD documents.</p>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <DocumentDropzone
+                files={files}
+                errors={uploadErrors}
+                onChange={(next, rejected) => { setFiles(next); setUploadErrors(rejected); setChecks([]); setAiAnalysis(null); }}
+                label="Drag and drop your bid documents here"
+                hint="Multiple documents supported. Invalid or unreadable files are rejected as Wrong document."
+              />
+              <button
+                disabled={!files.length || !selectedTender || busy}
+                onClick={checkDocuments}
+                className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busy ? "Checking documents…" : "Check Against This Tender"}
+              </button>
+            </div>
+          </section>
+        </>
+      )}
 
       {checks.length > 0 && (
         <>
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="font-semibold">Your tender checklist</h2>
-                <p className="mt-1 text-sm text-slate-500">Comparison against {selectedTender.tender_id} — {selectedTender.title}</p>
+                <h2 className="font-semibold text-slate-900">4. Requirement ↔ Evidence matching</h2>
+                <p className="mt-1 text-sm text-slate-500">Each tender requirement is matched against evidence detected in your uploaded documents.</p>
               </div>
-              <div className="text-sm font-semibold">{matched}/{checklist.length} requirements matched</div>
+              <div className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">{matched}/{checklist.length} matched</div>
             </div>
 
             <div className="mt-4 space-y-2">
               {checklist.map((item) => (
-                <div key={item.requirement} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    {item.matched ? <CheckCircle2 size={16} className="text-emerald-600"/> : <XCircle size={16} className="text-red-500"/>}
+                <div key={item.requirement} className="grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[1.1fr_1fr_auto] sm:items-center">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                    {item.matched ? <CheckCircle2 size={17} className="text-emerald-600"/> : <XCircle size={17} className="text-red-500"/>}
                     {item.requirement}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    <span className="font-medium text-slate-600">Bidder evidence:</span> {item.evidence || "No matching document detected"}
                   </div>
                   <Status value={item.matched ? "matched" : "missing"} />
                 </div>
@@ -201,25 +378,26 @@ export default function BidIntelligence() {
 
             {missing > 0 && (
               <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                <AlertTriangle size={15}/>
-                {missing} tender requirement{missing !== 1 ? "s" : ""} still need matching documents before you submit.
+                <AlertTriangle size={15} className="shrink-0"/>
+                <span>{missing} tender requirement{missing !== 1 ? "s" : ""} still need matching documents before you submit.</span>
               </div>
             )}
           </section>
 
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-end justify-between gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="font-semibold">Document validation results</h2>
-                <p className="mt-1 text-sm text-slate-500">Each uploaded file is inspected before the tender checklist is matched.</p>
+                <h2 className="font-semibold text-slate-900">5. Document validation</h2>
+                <p className="mt-1 text-sm text-slate-500">Every uploaded file is checked for readability and procurement-document relevance.</p>
               </div>
-              <div className="text-sm font-semibold">{valid}/{checks.length} files readable{wrong ? ` · ${wrong} wrong document${wrong !== 1 ? "s" : ""}` : ""}</div>
+              <div className="text-sm font-semibold text-slate-700">{valid}/{checks.length} readable{wrong ? ` · ${wrong} wrong document${wrong !== 1 ? "s" : ""}` : ""}</div>
             </div>
+
             <div className="mt-4 space-y-2">
-              {checks.map((doc,i) => (
+              {checks.map((doc, i) => (
                 <div key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <div>
-                    <div className="text-sm font-medium">{doc.filename}</div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-slate-800">{doc.filename}</div>
                     <div className="mt-1 text-xs text-slate-500">{doc.detected_documents?.join(", ") || doc.message || "Document inspected."}</div>
                   </div>
                   <Status value={doc.status}/>
@@ -227,10 +405,64 @@ export default function BidIntelligence() {
               ))}
             </div>
           </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><BrainCircuit size={20}/></div>
+              <div>
+                <h2 className="font-semibold text-slate-900">6. AI analysis</h2>
+                <p className="mt-1 text-sm text-slate-500">A concise pre-bid explanation of what matched and what still needs attention.</p>
+              </div>
+            </div>
+
+            {aiBusy ? (
+              <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">Analysing the uploaded evidence against the tender requirements…</div>
+            ) : aiAnalysis ? (
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <div className="text-xs text-slate-500">Requirements matched</div>
+                    <div className="mt-1 text-xl font-bold text-slate-900">{matched}/{checklist.length}</div>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <div className="text-xs text-slate-500">Readable documents</div>
+                    <div className="mt-1 text-xl font-bold text-slate-900">{valid}/{checks.length}</div>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <div className="text-xs text-slate-500">Needs attention</div>
+                    <div className="mt-1 text-xl font-bold text-slate-900">{missing + wrong}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                  {aiAnalysis.narrative || aiAnalysis.summary || aiAnalysis.message || (
+                    <>
+                      The uploaded documents provide evidence for <strong>{matched}</strong> of <strong>{checklist.length}</strong> tender requirements.
+                      {missing > 0 ? <> <strong>{missing}</strong> requirement{missing !== 1 ? "s" : ""} still need matching evidence.</> : " All listed document requirements have matching evidence."}
+                      {wrong > 0 ? <> <strong>{wrong}</strong> uploaded file{wrong !== 1 ? "s were" : " was"} flagged as wrong or unreadable.</> : null}
+                    </>
+                  )}
+                </div>
+
+                {missing > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-amber-800">Action required</div>
+                    <div className="mt-2 text-sm text-amber-900">
+                      Upload evidence for: <strong>{checklist.filter((x) => !x.matched).map((x) => x.requirement).join(", ")}</strong>.
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">AI analysis will appear after document checking.</div>
+            )}
+          </section>
         </>
       )}
 
-      <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">Sandbox prototype. This is a pre-bid matching aid; official eligibility still requires procurement-officer verification.</div>
+      <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">
+        Sandbox prototype. This is a pre-bid matching aid; official eligibility still requires procurement-officer verification.
+      </div>
     </div>
   );
 }
