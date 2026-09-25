@@ -1,0 +1,6 @@
+# ProcureShield Engine - full ML runtime
+# Install this after requirements.txt when supervised GAT training is required.
+-r requirements.txt
+
+torch>=2.2
+torch-geometric>=2.5
