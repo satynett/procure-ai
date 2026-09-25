@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ClipboardCheck, Users, Clock3, AlertTriangle, FileText, ArrowRight, Loader2, CheckCircle2, CircleDot } from "lucide-react";
+import { Plus, ClipboardCheck, Users , Clock3, AlertTriangle, FileText, ArrowRight, Loader2, CheckCircle2, CircleDot } from "lucide-react";
 import { api } from "../api.js";
 
 export default function OfficerPortal() {
@@ -33,12 +33,12 @@ export default function OfficerPortal() {
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-        <div className="flex items-center justify-between"><div><h2 className="font-semibold">Officer work queue</h2><p className="mt-1 text-sm text-slate-500">The actions here are operational, not portfolio analytics.</p></div></div>
+        <div className="flex items-center justify-between"><div><h2 className="font-semibold">Officer work queue</h2><p className="mt-1 text-sm text-slate-500"></p></div></div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <Queue title="Create / publish" text="Upload an RFP and publish a tender." icon={Plus} onClick={()=>navigate("/app/tenders/new")}/>
-          <Queue title="Review bids" text="Check submitted documents and evidence." icon={ClipboardCheck} onClick={()=>navigate("/app/bid-verification")}/>
-          <Queue title="Inspect risk" text="Open bidder relationship signals." icon={AlertTriangle} onClick={()=>navigate("/app/bidder-network")}/>
-          <Queue title="Reports" text="Generate verification and audit outputs." icon={FileText} onClick={()=>navigate("/app/reports")}/>
+          <Queue title="Bid verification" text="Review submitted documents, compliance and evidence." icon={ClipboardCheck} onClick={()=>navigate("/app/bid-verification")}/>
+          <Queue title="Risk & network" text="Review bidder relationships and risk signals." icon={AlertTriangle} onClick={()=>navigate("/app/bidder-network")}/>
+          <Queue title="Reports" text="Open verification and audit reports." icon={FileText} onClick={()=>navigate("/app/reports")}/>
         </div>
       </section>
 
@@ -46,9 +46,6 @@ export default function OfficerPortal() {
       <TenderSection id="draft-tenders" title="Draft Tenders" subtitle="Review, publish or remove drafts." tenders={drafts} actionLabel="Open Draft" onOpen={id=>navigate("/app/tenders/"+encodeURIComponent(id))}/>
       <TenderSection id="awarded-tenders" title="Closed / Awarded History" subtitle="Historical tender outcomes remain available for audit and bidder history." tenders={tenders.filter(t=>["Closed","Awarded","Withdrawn"].includes(t.status))} actionLabel="View History" onOpen={id=>navigate("/app/tenders/"+encodeURIComponent(id))}/>
 
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-start gap-3"><Clock3 size={18} className="mt-0.5 text-amber-700"/><div><h2 className="font-semibold text-amber-900">Prototype controls</h2><p className="mt-1 text-sm text-amber-800">Active tender deletion is intentionally replaced by withdrawal. Drafts and withdrawn tenders can be permanently removed; closed and awarded records stay in the audit trail.</p></div></div>
-      </section>
     </>}
   </div>;
 }
