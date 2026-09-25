@@ -299,11 +299,40 @@ function tenderManagementPayload(tender, bids, bidders, view = null) {
       finalComparison: buildTenderComparison({ tender, bidder, bid }),
     };
   });
+  // Transparent prototype ranking: compliance 50%, price competitiveness 30%,
+  // and relationship-risk review signal 20%. This is decision support only;
+  // the authorised officer remains responsible for the final award.
+  const rankedBids = tenderBids
+    .map((bid) => {
+      const complianceScore = Number(bid.finalComparison?.score || 0);
+      const quote = Number(bid.quoted_amount || 0);
+      const comparableQuotes = tenderBids
+        .filter((x) => Number(x.quoted_amount || 0) > 0)
+        .map((x) => Number(x.quoted_amount));
+      const lowestQuote = comparableQuotes.length ? Math.min(...comparableQuotes) : 0;
+      const priceScore = quote > 0 && lowestQuote > 0 ? Math.min(100, (lowestQuote / quote) * 100) : 0;
+      const riskScore = Number(bid.risk_score || 0);
+      const riskReviewScore = Math.max(0, 100 - riskScore);
+      const evaluationScore = Math.round((complianceScore * 0.5) + (priceScore * 0.3) + (riskReviewScore * 0.2));
+      return { ...bid, evaluation_score: evaluationScore, ranking_components: {
+        compliance: Math.round(complianceScore),
+        price_competitiveness: Math.round(priceScore),
+        risk_review: Math.round(riskReviewScore),
+      }};
+    })
+    .sort((a,b) => b.evaluation_score - a.evaluation_score || a.quoted_amount - b.quoted_amount)
+    .map((bid, index) => ({ ...bid, rank: index + 1 }));
+
   return {
     tender: { ...decorateTender(tender,bids,bidders), lifecycle:tender.status, award_amount:tender.award_amount||null,
       winner_bid_id:tender.winner_bid_id||null, rfp_text:tender.rfp_text||"", rfp_content_base64:tender.rfp_content_base64||null,
       eligibility_requirements:tender.eligibility_requirements||[], technical_requirements:tender.technical_requirements||[], important_dates:tender.important_dates||[] },
-    bids:tenderBids,
+    bids:rankedBids,
+    ranking:{
+      method:"Prototype decision-support score",
+      weights:{compliance:50,price_competitiveness:30,risk_review:20},
+      note:"Ranking supports officer review; it does not automatically determine the award."
+    },
     stats:{
       total_bids:tenderBids.length, verified:tenderBids.filter(b=>b.verification_status==="Verified").length,
       needs_review:tenderBids.filter(b=>b.verification_status==="Needs Review").length, rejected:tenderBids.filter(b=>b.verification_status==="Rejected").length,
