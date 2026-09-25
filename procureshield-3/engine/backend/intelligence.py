@@ -7,35 +7,97 @@ import re
 from typing import Any, Dict, List, Optional
 
 
-def extract_pdf(data: bytes, filename: str) -> Dict[str, Any]:
-    """Extract text from a PDF using PyMuPDF."""
-    if not filename.lower().endswith(".pdf"):
-        return {"filename": filename, "pages": 0, "text": "", "extraction_status": "unsupported_type", "ocr_required": False,
-                "message": "Only PDF documents are supported by the prototype."}
-    try:
+def _extract_docx_text(data: bytes) -> str:
+    """Extract readable text from a DOCX without extra packages."""
+    import io
+    import zipfile
+    import xml.etree.ElementTree as ET
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        xml = archive.read("word/document.xml")
+    root = ET.fromstring(xml)
+    parts = []
+    for node in root.iter():
+        if node.tag.endswith("}t") and node.text:
+            parts.append(node.text)
+        elif node.tag.endswith("}tab"):
+            parts.append("\t")
+        elif node.tag.endswith("}br"):
+            parts.append("\n")
+    return re.sub(r"[ \t]+", " ", "".join(parts)).strip()
+
+
+def _extract_legacy_doc_text(data: bytes) -> str:
+    """Best-effort text extraction for legacy binary .doc files."""
+    candidates = []
+    ascii_runs = re.findall(rb"[ -~]{4,}", data)
+    if ascii_runs:
+        candidates.append(b" ".join(ascii_runs).decode("latin-1", errors="ignore"))
+    utf16_runs = re.findall(rb"(?:[ -~]\x00){4,}", data)
+    if utf16_runs:
+        candidates.append(b"".join(utf16_runs).decode("utf-16le", errors="ignore"))
+    if not candidates:
+        return ""
+    terms = ("tender", "rfp", "bid", "procurement", "eligibility", "gst", "pan", "turnover", "certificate", "contract")
+    return max(candidates, key=lambda value: sum(value.lower().count(term) for term in terms))
+
+
+def _extract_document(data: bytes, filename: str) -> tuple[str, int, bool]:
+    """Extract text from PDF, DOCX or legacy DOC uploads."""
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    if suffix == "pdf":
         import fitz
-    except ImportError:
-        return {"filename": filename, "pages": 0, "text": "", "extraction_status": "parser_unavailable", "ocr_required": False,
-                "message": "PyMuPDF is not installed."}
-    try:
         doc = fitz.open(stream=data, filetype="pdf")
         pages = [(page.get_text("text") or "") for page in doc]
         doc.close()
+        text = "\n\n".join(pages).strip()
+        return text, len(pages), len(re.sub(r"\s+", "", text)) < 80
+    if suffix == "docx":
+        return _extract_docx_text(data), 1, False
+    if suffix == "doc":
+        return _extract_legacy_doc_text(data), 1, False
+    raise ValueError("Unsupported document type. Upload PDF, DOC or DOCX.")
+
+
+def extract_pdf(data: bytes, filename: str) -> Dict[str, Any]:
+    """Extract and classify an uploaded PDF, DOC or DOCX procurement document."""
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    if suffix not in {"pdf", "doc", "docx"}:
+        return {"filename": filename, "pages": 0, "text": "", "extraction_status": "unsupported_type", "ocr_required": False,
+                "message": "Unsupported document type. Upload PDF, DOC or DOCX."}
+    try:
+        text, pages, ocr_required = _extract_document(data, filename)
+    except ImportError:
+        return {"filename": filename, "pages": 0, "text": "", "extraction_status": "parser_unavailable", "ocr_required": False,
+                "message": "PyMuPDF is not installed for PDF analysis."}
     except Exception as exc:
         return {"filename": filename, "pages": 0, "text": "", "extraction_status": "error", "ocr_required": False,
-                "message": f"Unable to read PDF: {exc}"}
-    text = "\n\n".join(pages).strip()
-    ocr_required = len(re.sub(r"\s+", "", text)) < 80
+                "message": f"Unable to read {filename}: {exc}"}
+
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    procurement_terms = (
+        "tender", "request for proposal", "rfp", "bid", "bidder", "procurement",
+        "government", "quotation", "eligibility", "gst", "pan", "udyam", "msme",
+        "emd", "experience", "turnover", "work order", "certificate", "contract",
+        "purchase order", "delivery", "technical specification"
+    )
+    relevant_hits = sum(1 for term in procurement_terms if term in normalized)
+    if not text:
+        extraction_status = "empty"
+        message = f"Wrong document: {filename} contains no readable text."
+    elif relevant_hits == 0:
+        extraction_status = "wrong_document"
+        message = f"Wrong document: {filename} does not appear to contain procurement or tender content."
+    else:
+        extraction_status = "success"
+        message = "Text extracted successfully." if not ocr_required else "Text extracted, but this PDF may need OCR for complete analysis."
     return {
         "filename": filename,
-        "pages": len(pages),
+        "pages": pages,
         "text": text,
-        "extraction_status": "success" if text else "empty",
+        "extraction_status": extraction_status,
         "ocr_required": ocr_required,
-        "message": "Text extracted successfully." if text and not ocr_required
-                   else "Little or no text was extracted; OCR may be required.",
+        "message": message,
     }
-
 
 def extract_requirements(text: str) -> Dict[str, Any]:
     """Extract common procurement requirements using a deterministic parser."""
@@ -89,11 +151,11 @@ def extract_requirements(text: str) -> Dict[str, Any]:
     # so the prototype stays explainable and does not invent requirements.
     technical_requirements: List[Dict[str, Any]] = []
     clause_patterns = [
-        (r"(?:delivery|completion)[^.\\n]{0,100}(?:within|in)\\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
-        (r"(?:bid validity|validity of bid)[^.\\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
-        (r"(?:emd|earnest money deposit)[^.\\n]{0,80}?(?:rs\\.?|₹|I|■)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
-        (r"(?:iso)[^.\\n]{0,60}(9001|14001|45001)", "certification"),
-        (r"(?:oem|original equipment manufacturer)[^.\\n]{0,80}(?:authorization|certificate)", "oem"),
+        (r"(?:delivery|completion)[^.\n]{0,100}(?:within|in)\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
+        (r"(?:bid validity|validity of bid)[^.\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
+        (r"(?:emd|earnest money deposit)[^.\n]{0,80}?(?:rs\\.?|₹|I|■)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
+        (r"(?:iso)[^.\n]{0,60}(9001|14001|45001)", "certification"),
+        (r"(?:oem|original equipment manufacturer)[^.\n]{0,80}(?:authorization|certificate)", "oem"),
     ]
     for pattern, kind in clause_patterns:
         match = re.search(pattern, source, flags=re.I)
@@ -142,22 +204,21 @@ def extract_requirements(text: str) -> Dict[str, Any]:
 
 
 def validate_document(filename: str, content_type: Optional[str], data: bytes) -> Dict[str, Any]:
-    """Validate a bidder PDF and expose extracted evidence for checklist matching."""
+    """Validate a bidder PDF/DOC/DOCX and expose extracted evidence."""
+    extension_ok = bool(re.search(r"\.(pdf|doc|docx)$", filename, flags=re.I))
     checks = [
         {"name": "File present", "passed": bool(data)},
-        {"name": "PDF extension", "passed": filename.lower().endswith(".pdf")},
-        {"name": "Readable PDF", "passed": False},
+        {"name": "Supported document type", "passed": extension_ok},
+        {"name": "Readable document", "passed": False},
     ]
+
     text = ""
     pages = 0
-    if data and filename.lower().endswith(".pdf"):
+    ocr_required = False
+    if data and extension_ok:
         try:
-            import fitz
-            doc = fitz.open(stream=data, filetype="pdf")
-            pages = len(doc)
-            text = "\n".join((page.get_text("text") or "") for page in doc).strip()
-            checks[2]["passed"] = pages > 0
-            doc.close()
+            text, pages, ocr_required = _extract_document(data, filename)
+            checks[2]["passed"] = bool(text.strip()) or pages > 0
         except Exception:
             pass
 
@@ -180,14 +241,38 @@ def validate_document(filename: str, content_type: Optional[str], data: bytes) -
         if any(needle in lowered for needle in needles)
     ]
 
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    relevance_terms = (
+        "gst", "pan", "udyam", "msme", "certificate", "registration", "turnover",
+        "experience", "work order", "balance sheet", "financial statement", "iso",
+        "oem", "authorization", "bid", "tender", "procurement", "company",
+        "incorporation", "emd", "bid security", "contract", "purchase order"
+    )
+    relevant_hits = sum(1 for term in relevance_terms if term in normalized)
+    readable = checks[0]["passed"] and checks[1]["passed"] and checks[2]["passed"]
+    if not readable:
+        status = "wrong_document"
+        message = f"Wrong document: {filename} is not a readable PDF, DOC or DOCX file."
+    elif len(re.sub(r"\s+", "", text)) < 40:
+        status = "wrong_document"
+        message = f"Wrong document: {filename} contains too little readable content."
+    elif relevant_hits == 0:
+        status = "wrong_document"
+        message = f"Wrong document: {filename} does not appear to be a procurement/business supporting document."
+    else:
+        status = "valid"
+        message = f"{filename} is readable and appears relevant for procurement verification."
+
     return {
         "document": filename,
         "content_type": content_type,
         "pages": pages,
         "text": text,
         "detected_documents": detected_documents,
-        "status": "valid" if all(c["passed"] for c in checks) else "needs_review",
+        "status": status,
+        "message": message,
         "checks": checks,
+        "ocr_required": ocr_required,
     }
 
 
