@@ -119,7 +119,7 @@ export default function BidDetail() {
               onClick={() => downloadBidPdf({ bid, bidder, tender: data.tender, documents: bid.submitted_documents || [] })}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <Download size={14} /> Bid PDF
+              <Download size={14} /> Bid Record PDF
             </button>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function BidDetail() {
               <FileText size={16} /> Bidder Submitted Documents
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Original files uploaded with this bid. Officers can open supported files or download them for verification.
+              Exact files uploaded by the bidder. The Bid Record PDF above is a separate generated record.
             </p>
           </div>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
