@@ -161,7 +161,8 @@ export default function BidIntelligence() {
     setAiBusy(true);
 
     const readable = results.filter((item) => item.status === "valid");
-    const requiredDocuments = requirementList(selectedTender.required_documents);\n    const missingRequirements = requiredDocuments.filter((requirement) => {
+    const requiredDocuments = requirementList(selectedTender.required_documents);
+    const missingRequirements = requiredDocuments.filter((requirement) => {
       const candidates = aliases[requirement] || [requirement];
       return !readable.some((doc) =>
         candidates.some((candidate) => (doc.detected_documents || []).includes(candidate))
@@ -170,8 +171,11 @@ export default function BidIntelligence() {
 
     try {
       const documentText = readable
-        .map((doc) => `--- ${doc.filename} ---\n${doc.text || doc.detected_documents?.join(", ") || ""}`)
-        .join("\n\n")
+        .map((doc) => `--- ${doc.filename} ---
+${doc.text || doc.detected_documents?.join(", ") || ""}`)
+        .join("
+
+")
         .slice(0, 30000);
 
       if (documentText) {
@@ -192,7 +196,7 @@ export default function BidIntelligence() {
       } else {
         setAiAnalysis({
           fallbackMissing: missingRequirements,
-          fallbackMatched: (selectedTender.required_documents || []).length - missingRequirements.length,
+          fallbackMatched: requiredDocuments.length - missingRequirements.length,
           readableCount: readable.length,
           wrongCount: results.filter((d) => d.status === "wrong_document").length,
           message: "No readable bidder document was available for AI analysis."
