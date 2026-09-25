@@ -352,20 +352,70 @@ app.get("/api/officer/tenders/:id", asyncRoute(async (req,res)=>{
 }));
 
 app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
-  const {title,department,category,deadline,estimated_value,publish=false,rfp_filename,rfp_content_base64}=req.body||{};
-  if(!title||!department||!deadline||!rfp_content_base64) return res.status(400).json({message:"Title, department, deadline and an RFP PDF are required."});
-  const rfp=await intelligencePdf({filename:rfp_filename||"tender-rfp.pdf",content_base64:rfp_content_base64,content_type:"application/pdf"});
-  if(rfp.extraction_status!=="success") return res.status(400).json({message:rfp.message||"RFP could not be read."});
-  const parsed=rfp.requirements||{};
-  const summary=[...(parsed.eligibility_requirements||[]),...(parsed.technical_requirements||[])].map(x=>x.requirement).filter(Boolean).slice(0,8).join(", ")||"Officer review required before publication.";
+  const {title,department,category,deadline,estimated_value,publish=false,rfp_filename,rfp_content_base64,rfp_documents=[]}=req.body||{};
+  if(!title||!department||!deadline||(!rfp_content_base64 && !rfp_documents.length)) {
+    return res.status(400).json({message:"Title, department, deadline and at least one RFP document are required."});
+  }
+
+  const suppliedDocs = rfp_documents.length
+    ? rfp_documents
+    : [{filename:rfp_filename||"tender-rfp.pdf",content_type:"application/pdf",content_base64:rfp_content_base64}];
+
+  const analyses=[];
+  for(const doc of suppliedDocs){
+    const analysis=await intelligencePdf({
+      filename:doc.filename||"tender-rfp.pdf",
+      content_base64:doc.content_base64,
+      content_type:doc.content_type||"application/pdf"
+    });
+    if(analysis.extraction_status==="wrong_document" || analysis.extraction_status==="empty" || analysis.extraction_status==="error" || analysis.extraction_status==="unsupported_type"){
+      return res.status(400).json({
+        message:analysis.message || `Wrong document: ${doc.filename || "uploaded file"}`,
+        filename:doc.filename || null,
+        document_error:true
+      });
+    }
+    analyses.push(analysis);
+  }
+
+  const combinedText=analyses.map(x=>x.text||"").filter(Boolean).join("\n\n");
+  const combinedRequirements=analyses.reduce((acc,analysis)=>{
+    const parsed=analysis.requirements||{};
+    acc.eligibility_requirements.push(...(parsed.eligibility_requirements||[]));
+    acc.technical_requirements.push(...(parsed.technical_requirements||[]));
+    acc.required_documents.push(...(parsed.required_documents||[]));
+    acc.important_dates.push(...(parsed.important_dates||[]));
+    return acc;
+  },{eligibility_requirements:[],technical_requirements:[],required_documents:[],important_dates:[]});
+  combinedRequirements.required_documents=[...new Set(combinedRequirements.required_documents)];
+  combinedRequirements.important_dates=[...new Set(combinedRequirements.important_dates)];
+  const summary=[...combinedRequirements.eligibility_requirements,...combinedRequirements.technical_requirements].map(x=>x.requirement).filter(Boolean).slice(0,8).join(", ")||"Officer review required before publication.";
+
   const tenders=getTenders(); const year=new Date().getFullYear(); const sequence=String(tenders.length+1).padStart(4,"0");
-  const tender={tender_id:`GEM/${year}/T/${sequence}`,title:String(title).trim(),department:String(department).trim(),category:String(category||"General Procurement").trim(),
-    status:publish?"Open":"Draft",deadline:String(deadline),estimated_value:Number(estimated_value||0),rfp_filename:rfp_filename||"tender-rfp.pdf",
-    rfp_content_base64,rfp_text:rfp.text||"",eligibility_summary:summary,eligibility_requirements:parsed.eligibility_requirements||[],
-    technical_requirements:parsed.technical_requirements||[],required_documents:parsed.required_documents||[],important_dates:parsed.important_dates||[],
-    parser:parsed.parser||"deterministic-prototype",created_at:new Date().toISOString(),published_at:publish?new Date().toISOString():null};
+  const primary=suppliedDocs[0];
+  const tender={
+    tender_id:`GEM/${year}/T/${sequence}`,
+    title:String(title).trim(),
+    department:String(department).trim(),
+    category:String(category||"General Procurement").trim(),
+    status:publish?"Open":"Draft",
+    deadline:String(deadline),
+    estimated_value:Number(estimated_value||0),
+    rfp_filename:primary.filename||rfp_filename||"tender-rfp.pdf",
+    rfp_content_base64:primary.content_base64,
+    rfp_documents:suppliedDocs.map(d=>({filename:d.filename,content_type:d.content_type||"application/pdf",content_base64:d.content_base64})),
+    rfp_text:combinedText,
+    eligibility_summary:summary,
+    eligibility_requirements:combinedRequirements.eligibility_requirements,
+    technical_requirements:combinedRequirements.technical_requirements,
+    required_documents:combinedRequirements.required_documents,
+    important_dates:combinedRequirements.important_dates,
+    parser:"deterministic-prototype",
+    created_at:new Date().toISOString(),
+    published_at:publish?new Date().toISOString():null
+  };
   tenders.unshift(tender); await writeJson("tenders.json",tenders);
-  await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:publish?"Tender Published":"Tender Created as Draft",tender_id:tender.tender_id,timestamp:new Date().toISOString(),rfp_filename:tender.rfp_filename});
+  await appendAuditLog({id:`AUD-${Date.now()}`,officer:"Procurement Officer 01",action:publish?"Tender Published":"Tender Created as Draft",tender_id:tender.tender_id,timestamp:new Date().toISOString(),rfp_filename:tender.rfp_filename,rfp_document_count:suppliedDocs.length});
   res.status(201).json({tender:decorateTender(tender,getBids(),getBidders())});
 }));
 
@@ -391,11 +441,39 @@ app.delete("/api/officer/tenders/:id",async (req,res)=>{
 });
 
 
-app.post("/api/bidder/bids", async (req, res) => {
+app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
   const { tender_id, company_name, documents = [], bid_amount = null } = req.body || {};
   const tender = getTenders().find((t) => t.tender_id === tender_id);
   if (!tender || tender.status !== "Open") return res.status(400).json({ message: "This tender is not open for bidding." });
   if (!company_name?.trim()) return res.status(400).json({ message: "Company name is required." });
+
+  const amount = Number(bid_amount);
+  if (bid_amount === null || bid_amount === undefined || String(bid_amount).trim() === "" || !Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ message: "A valid bid amount greater than ₹0 is required." });
+  }
+  if (!Array.isArray(documents) || documents.length === 0) {
+    return res.status(400).json({ message: "At least one bid document is required." });
+  }
+
+  const validatedDocuments=[];
+  for(const doc of documents){
+    if(typeof doc === "string"){
+      return res.status(400).json({message:"Please re-upload your bid documents so they can be verified before submission."});
+    }
+    const result=await intelligenceValidateDocument({
+      filename:doc.name||"bid-document",
+      content_type:doc.content_type||"application/pdf",
+      content_base64:doc.content_base64
+    });
+    if(result.status==="wrong_document"){
+      return res.status(400).json({
+        message:result.message || `Wrong document: ${doc.name || "uploaded file"}`,
+        filename:doc.name || null,
+        document_error:true
+      });
+    }
+    validatedDocuments.push(doc.name);
+  }
 
   const bids = getBids();
   const sequence = bids.length + 1;
@@ -408,12 +486,12 @@ app.post("/api/bidder/bids", async (req, res) => {
     bid_amount: amount,
     submission_date: new Date().toISOString().slice(0, 10),
     verification_status: "Needs Review",
-    submitted_documents: documents.map((d) => typeof d === "string" ? d : d.name).filter(Boolean),
+    submitted_documents: validatedDocuments.filter(Boolean),
   };
   bids.push(bid);
   await writeJson("bids.json", bids);
   res.status(201).json({ success: true, bid });
-});
+}));
 
 // ---------------------------------------------------------------------
 // Bidder bid history
