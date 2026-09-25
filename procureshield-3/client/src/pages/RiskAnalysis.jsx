@@ -198,8 +198,54 @@ export default function RiskAnalysis() {
         </div>
       </section>
     </div>
+
+      {companyLoading && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40"><div className="rounded-xl bg-white p-6 shadow-xl"><Loader2 className="mx-auto animate-spin text-brand-600"/><div className="mt-2 text-sm text-slate-600">Loading company history…</div></div></div>}
+      {companyDetail && <CompanyHistoryModal data={companyDetail} onClose={() => setCompanyDetail(null)} navigate={navigate}/>}
+    </div>
   );
 }
+
+
+function CompanyHistoryModal({ data, onClose, navigate }) {
+  const { bidder, bids = [] } = data;
+  const verified = bids.filter((b) => b.verification_status === "Verified").length;
+  const rejected = bids.filter((b) => b.verification_status === "Rejected").length;
+  const review = bids.filter((b) => b.verification_status === "Needs Review").length;
+  const awarded = bids.filter((b) => b.winner_name === bidder.company_name).length;
+  const rows = [
+    ["Company", bidder.company_name],
+    ["Founder / Director", bidder.director_name],
+    ["Registered address", bidder.address],
+    ["Phone", bidder.phone || bidder.phone_masked],
+    ["Email", bidder.email],
+    ["GSTIN", bidder.gst_number],
+    ["PAN", bidder.pan_number],
+    ["MSME status", bidder.msme_status],
+  ];
+  return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/60 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="sticky top-0 z-10 flex items-start justify-between bg-slate-800 px-6 py-5 text-white">
+        <div><div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Company Profile & Procurement History</div><h2 className="mt-1 text-xl font-bold">{bidder.company_name}</h2><div className="mt-1 text-xs text-slate-300">{bidder.bidder_id}</div></div>
+        <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-300 hover:bg-white/10"><X size={18}/></button>
+      </div>
+      <div className="space-y-5 p-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <HistoryStat label="Bids submitted" value={bids.length}/><HistoryStat label="Verified / accepted" value={verified}/><HistoryStat label="Rejected" value={rejected}/><HistoryStat label="Under review" value={review}/><HistoryStat label="Awarded" value={awarded}/>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {rows.map(([label, value]) => <div key={label} className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</div><div className="mt-2 break-words text-sm font-semibold text-slate-800">{value || "—"}</div></div>)}
+        </div>
+        <div><h3 className="text-sm font-semibold text-slate-800">Previous bids</h3>
+          <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200"><table className="w-full text-sm"><thead><tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><th className="px-3 py-2.5">Bid</th><th className="px-3 py-2.5">Tender</th><th className="px-3 py-2.5">Amount</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Date</th></tr></thead><tbody>
+            {bids.map((b) => <tr key={b.bid_id} className="border-t border-slate-100"><td className="px-3 py-2.5 font-mono text-xs text-brand-700">{b.bid_id}</td><td className="px-3 py-2.5"><div className="font-medium">{b.tender_title || b.tender_id}</div><div className="text-[11px] text-slate-500">{b.tender_id}</div></td><td className="px-3 py-2.5">₹{Number(b.bid_amount || 0).toLocaleString("en-IN")}</td><td className="px-3 py-2.5"><StatusBadge status={b.verification_status}/></td><td className="px-3 py-2.5 text-slate-500">{b.submission_date || "—"}</td></tr>)}
+          </tbody></table></div>
+        </div>
+        <button type="button" onClick={() => navigate("/app/bid-verification?q=" + encodeURIComponent(bidder.company_name))} className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white">Open all bids</button>
+      </div>
+    </div>
+  </div>;
+}
+function HistoryStat({ label, value }) { return <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</div><div className="mt-1 text-xl font-bold text-slate-900">{value}</div></div>; }
 
 function Stat({ icon: Icon, label, value }) {
   return (
