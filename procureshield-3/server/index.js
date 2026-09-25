@@ -457,22 +457,51 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
 
   const validatedDocuments=[];
   for(const doc of documents){
-    if(typeof doc === "string"){
-      return res.status(400).json({message:"Please re-upload your bid documents so they can be verified before submission."});
-    }
-    const result=await intelligenceValidateDocument({
-      filename:doc.name||"bid-document",
-      content_type:doc.content_type||"application/pdf",
-      content_base64:doc.content_base64
-    });
-    if(result.status==="wrong_document"){
+    if(!doc || typeof doc !== "object"){
       return res.status(400).json({
-        message:result.message || `Wrong document: ${doc.name || "uploaded file"}`,
-        filename:doc.name || null,
+        message:"Wrong document: each upload must be a real document file.",
         document_error:true
       });
     }
-    validatedDocuments.push(doc.name);
+    const filename=String(doc.name || "bid-document").trim();
+    const contentBase64=typeof doc.content_base64 === "string" ? doc.content_base64 : "";
+    const extension=/\.(pdf|doc|docx)$/i.test(filename);
+    if(!extension){
+      return res.status(400).json({
+        message:`Wrong document: ${filename} is not a supported document. Upload PDF, DOC or DOCX.`,
+        filename,
+        document_error:true
+      });
+    }
+    if(!contentBase64){
+      return res.status(400).json({
+        message:`Wrong document: ${filename} is empty or could not be read.`,
+        filename,
+        document_error:true
+      });
+    }
+    try {
+      const result=await intelligenceValidateDocument({
+        filename,
+        content_type:doc.content_type||"application/pdf",
+        content_base64:contentBase64
+      });
+      if(result.status==="wrong_document"){
+        return res.status(400).json({
+          message:result.message || `Wrong document: ${filename}`,
+          filename,
+          document_error:true
+        });
+      }
+      validatedDocuments.push(filename);
+    } catch (err) {
+      if(err instanceof EngineUnavailableError) throw err;
+      return res.status(400).json({
+        message:`Wrong document: ${filename}. The file could not be validated.`,
+        filename,
+        document_error:true
+      });
+    }
   }
 
   const bids = getBids();
