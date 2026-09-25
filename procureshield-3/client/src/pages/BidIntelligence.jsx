@@ -23,6 +23,21 @@ function encodeFile(file) {
   });
 }
 
+function displayRequirement(value) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    return value.requirement || value.type || value.source || "Requirement";
+  }
+  return String(value ?? "");
+}
+
+function requirementList(value) {
+  if (Array.isArray(value)) return value.map(displayRequirement).filter(Boolean);
+  if (value && typeof value === "object") return [displayRequirement(value)];
+  if (typeof value === "string" && value.trim()) return [value];
+  return [];
+}
+
 const aliases = {
   "GST certificate": ["GST certificate"],
   "PAN card": ["PAN card"],
@@ -146,7 +161,7 @@ export default function BidIntelligence() {
     setAiBusy(true);
 
     const readable = results.filter((item) => item.status === "valid");
-    const missingRequirements = (selectedTender.required_documents || []).filter((requirement) => {
+    const requiredDocuments = requirementList(selectedTender.required_documents);\n    const missingRequirements = requiredDocuments.filter((requirement) => {
       const candidates = aliases[requirement] || [requirement];
       return !readable.some((doc) =>
         candidates.some((candidate) => (doc.detected_documents || []).includes(candidate))
@@ -163,14 +178,14 @@ export default function BidIntelligence() {
         const result = await api.intelligenceAIDocumentCheck({
           filename: readable.map((d) => d.filename).join(", "),
           document_text: documentText,
-          requirements: selectedTender.required_documents || [],
+          requirements: requiredDocuments,
           tender_id: selectedTender.tender_id
         });
 
         setAiAnalysis({
           ...(result || {}),
           fallbackMissing: missingRequirements,
-          fallbackMatched: (selectedTender.required_documents || []).length - missingRequirements.length,
+          fallbackMatched: requiredDocuments.length - missingRequirements.length,
           readableCount: readable.length,
           wrongCount: results.filter((d) => d.status === "wrong_document").length
         });
@@ -196,8 +211,8 @@ export default function BidIntelligence() {
     }
   }
 
-  const detected = [...new Set(checks.flatMap((c) => c.detected_documents || []))];
-  const checklist = (selectedTender?.required_documents || []).map((requirement) => {
+  const detected = [...new Set(checks.flatMap((c) => requirementList(c.detected_documents)))];
+  const checklist = requirementList(selectedTender?.required_documents).map((requirement) => {
     const candidates = aliases[requirement] || [requirement];
     const evidence = checks.find((doc) =>
       doc.status === "valid" &&
@@ -305,13 +320,13 @@ export default function BidIntelligence() {
             </div>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {(selectedTender.eligibility_requirements || []).map((item) => (
+              {requirementList(selectedTender.eligibility_requirements).map((item) => (
                 <div key={item} className="flex gap-2 rounded-lg border border-slate-100 p-3 text-sm text-slate-700">
                   <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-brand-600"/>
                   <span>{item}</span>
                 </div>
               ))}
-              {(selectedTender.technical_requirements || []).map((item) => (
+              {requirementList(selectedTender.technical_requirements).map((item) => (
                 <div key={`technical-${item}`} className="flex gap-2 rounded-lg border border-slate-100 p-3 text-sm text-slate-700">
                   <FileCheck2 size={16} className="mt-0.5 shrink-0 text-brand-600"/>
                   <span>{item}</span>
@@ -322,7 +337,7 @@ export default function BidIntelligence() {
             <div className="mt-5">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Required documents</div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(selectedTender.required_documents || []).map((item) => (
+                {requirementList(selectedTender.required_documents).map((item) => (
                   <span key={item} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">{item}</span>
                 ))}
               </div>
