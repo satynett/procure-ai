@@ -10,6 +10,8 @@ export default function RiskAnalysis() {
   const [bids, setBids] = useState([]);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [companyDetail, setCompanyDetail] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,6 +23,13 @@ export default function RiskAnalysis() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  async function openCompany(id) {
+    setCompanyLoading(true);
+    try { setCompanyDetail(await api.bidderDetail(id)); }
+    catch (err) { window.alert(err.message || "Unable to load company history."); }
+    finally { setCompanyLoading(false); }
+  }
 
   if (loading || !network) {
     return <div className="flex h-64 items-center justify-center text-slate-400"><Loader2 className="animate-spin" /></div>;
@@ -113,7 +122,7 @@ export default function RiskAnalysis() {
                 <button
                   key={member.id}
                   type="button"
-                  onClick={() => navigate(`/app/bid-verification?q=${encodeURIComponent(member.name)}`)}
+                  onClick={() => openCompany(member.id)}
                   className="flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-3 text-left hover:border-brand-200 hover:bg-brand-50"
                 >
                   <div className="flex min-w-0 items-center gap-3">
