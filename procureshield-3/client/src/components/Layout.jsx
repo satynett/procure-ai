@@ -13,8 +13,8 @@ import {
   LogOut,
   FlaskConical,
   PlusSquare,
-  Menu,
-  X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { Building2 } from "lucide-react";
@@ -38,14 +38,34 @@ export default function Layout({ children }) {
   const [query, setQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
-  const [launcherOpen, setLauncherOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      return localStorage.getItem("procureshield-sidebar") !== "collapsed";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("procureshield-sidebar", sidebarOpen ? "open" : "collapsed");
+    } catch {
+      // Sidebar preference is non-critical.
+    }
+  }, [sidebarOpen]);
 
   useEffect(() => {
     let active = true;
     api.alerts()
-      .then((res) => { if (active) setAlertCount(Array.isArray(res.alerts) ? res.alerts.length : 0); })
-      .catch(() => { if (active) setAlertCount(0); });
-    return () => { active = false; };
+      .then((res) => {
+        if (active) setAlertCount(Array.isArray(res.alerts) ? res.alerts.length : 0);
+      })
+      .catch(() => {
+        if (active) setAlertCount(0);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   function handleSearch(e) {
@@ -56,76 +76,109 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex h-screen bg-slate-100">
-      {/* Sidebar */}
-      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-800 text-slate-200 md:flex">
+      {/* ChatGPT-style collapsible officer sidebar */}
+      <aside
+        className={`hidden flex-shrink-0 flex-col border-r border-slate-200 bg-slate-800 text-slate-200 transition-[width] duration-200 md:flex ${
+          sidebarOpen ? "w-64" : "w-[72px]"
+        }`}
+      >
         <button
           type="button"
-          onClick={() => setLauncherOpen((v) => !v)}
-          aria-label="Open ProcureShield AI menu"
-          title="ProcureShield AI"
-          className="flex w-full items-center gap-2 border-b border-white/10 px-5 py-5 text-left transition hover:bg-white/5"
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          className={`group flex h-[72px] w-full flex-shrink-0 items-center border-b border-white/10 text-left transition hover:bg-white/5 ${
+            sidebarOpen ? "gap-2 px-4" : "justify-center px-2"
+          }`}
         >
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-700">
-            {launcherOpen ? <X size={20} className="text-white" /> : <ShieldCheck size={20} className="text-white" />}
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-700 shadow-sm">
+            <ShieldCheck size={20} className="text-white" />
           </div>
-          <div>
-            <div className="text-sm font-bold leading-tight text-white">ProcureShield AI</div>
-            <div className="text-[11px] leading-tight text-slate-400">GeM Verification System</div>
-          </div>
+
+          {sidebarOpen && (
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold leading-tight text-white">ProcureShield AI</div>
+              <div className="truncate text-[11px] leading-tight text-slate-400">GeM Verification System</div>
+            </div>
+          )}
+
+          {sidebarOpen && (
+            <PanelLeftClose
+              size={17}
+              className="flex-shrink-0 text-slate-400 transition group-hover:text-white"
+            />
+          )}
         </button>
 
-        {launcherOpen && (
-          <div className="mx-3 mt-2 rounded-xl border border-white/10 bg-slate-900/80 p-2 shadow-lg">
-            <div className="px-2 py-1.5">
-              <div className="text-[10px] font-bold text-slate-300">Procurement tools</div>
-              <div className="text-[9px] text-slate-500">Quick access to officer workflows</div>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {NAV.map((item) => (
-                <button
-                  key={item.to}
-                  type="button"
-                  onClick={() => {
-                    setLauncherOpen(false);
-                    navigate(item.to);
-                  }}
-                  className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center text-[9px] font-semibold text-slate-300 transition hover:border-emerald-500/50 hover:bg-emerald-700/20 hover:text-white"
-                >
-                  <item.icon size={14} className="text-emerald-400" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
+        {sidebarOpen && (
+          <div className="px-3 pt-3">
+            <button
+              type="button"
+              onClick={() => navigate("/app/tenders/new")}
+              className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-500/40 hover:bg-emerald-700/20"
+            >
+              <PlusSquare size={16} className="text-emerald-400" />
+              <span>New Tender</span>
+            </button>
           </div>
         )}
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        {!sidebarOpen && (
+          <div className="px-2 pt-3">
+            <button
+              type="button"
+              onClick={() => navigate("/app/tenders/new")}
+              aria-label="Create new tender"
+              title="New Tender"
+              className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-emerald-400 transition hover:border-emerald-500/40 hover:bg-emerald-700/20 hover:text-white"
+            >
+              <PlusSquare size={17} />
+            </button>
+          </div>
+        )}
+
+        <nav className={`flex-1 space-y-1 overflow-y-auto py-3 ${
+          sidebarOpen ? "px-3" : "px-2"
+        }`}>
           {NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
+              title={!sidebarOpen ? item.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                `group flex items-center rounded-lg text-sm font-medium transition-colors ${
+                  sidebarOpen ? "gap-3 px-3 py-2.5" : "justify-center px-2 py-2.5"
+                } ${
                   isActive
                     ? "bg-emerald-700 text-white shadow-sm"
                     : "text-slate-300 hover:bg-white/5 hover:text-white"
                 }`
               }
             >
-              <item.icon size={17} />
-              {item.label}
+              <item.icon size={17} className="flex-shrink-0" />
+              {sidebarOpen && <span className="truncate">{item.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
-          <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] font-medium text-amber-300">
-            <FlaskConical size={14} />
-            DEMO / SANDBOX DATA
-          </div>
+        <div className={`border-t border-white/10 ${
+          sidebarOpen ? "p-3" : "flex justify-center p-2"
+        }`}>
+          {sidebarOpen ? (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] font-medium text-amber-300">
+              <FlaskConical size={14} />
+              DEMO / SANDBOX DATA
+            </div>
+          ) : (
+            <div
+              title="Demo / Sandbox Data"
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-300"
+            >
+              <FlaskConical size={14} />
+            </div>
+          )}
         </div>
       </aside>
-
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -161,6 +214,7 @@ export default function Layout({ children }) {
             </button>
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setProfileOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 hover:bg-slate-50"
               >
@@ -177,6 +231,7 @@ export default function Layout({ children }) {
                     <div>{officer?.role}</div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => {
                       logout();
                       navigate("/");
