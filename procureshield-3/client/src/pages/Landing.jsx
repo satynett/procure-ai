@@ -26,11 +26,7 @@ export default function Landing() {
       </header>
 
 
-      <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-4xl flex-col justify-center px-6 py-8 text-center">
-        <div className="mb-3 inline-flex self-center items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-          Smart India Hackathon Prototype
-        </div>
-
+      <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-4xl flex-col justify-center px-6 py-10 text-center">
         <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
           Making GeM Procurement <span className="text-emerald-700">Smarter, Faster</span> &amp; More Transparent
         </h1>
