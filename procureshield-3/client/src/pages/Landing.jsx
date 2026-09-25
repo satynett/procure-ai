@@ -34,7 +34,7 @@ export default function Landing() {
 
           <div className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
             <button
-              onClick={() => navigate("/bidder")}
+              onClick={() => navigate("/bidder/login")}
               className="group rounded-xl border border-white/10 bg-white/[0.06] p-5 text-left transition hover:border-brand-400/40 hover:bg-white/[0.09]"
             >
               <div className="flex items-center gap-2 text-brand-300">
@@ -42,7 +42,7 @@ export default function Landing() {
                 <span className="text-xs font-semibold uppercase tracking-wide">Bidder Portal</span>
               </div>
               <div className="mt-3 text-lg font-semibold">Find tenders & check eligibility</div>
-              <div className="mt-1 text-sm text-slate-400">Prepare documents and submit bids.</div>
+              <div className="mt-1 text-sm text-slate-400">Sign in to prepare documents and submit bids.</div>
               <ArrowRight className="mt-4 text-brand-400 transition group-hover:translate-x-1" size={17} />
             </button>
 
@@ -55,7 +55,7 @@ export default function Landing() {
                 <span className="text-xs font-semibold uppercase tracking-wide">Officer Portal</span>
               </div>
               <div className="mt-3 text-lg font-semibold">Manage tenders & review bids</div>
-              <div className="mt-1 text-sm text-white/75">Verify compliance, risk and bidder relationships.</div>
+              <div className="mt-1 text-sm text-white/75">Sign in to verify compliance, risk and bidder relationships.</div>
               <ArrowRight className="mt-4 text-white transition group-hover:translate-x-1" size={17} />
             </button>
           </div>
