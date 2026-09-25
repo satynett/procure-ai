@@ -114,16 +114,25 @@ export async function replaceCollection(collection, rows) {
   const table=TABLES[collection], key=KEY_FIELDS[collection], client=await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("DELETE FROM " + table);
+
+    // IMPORTANT: never rebuild a collection with DELETE + INSERT.
+    // The UI works with array-shaped snapshots, but PostgreSQL is the
+    // persistent source of truth. A DELETE here used to erase newly-created
+    // bids/bidders whenever another route wrote a stale snapshot back.
+    //
+    // Upsert only the records explicitly changed by the caller. Existing
+    // records that are not present in this snapshot remain untouched.
     for (const row of rows) {
       if (!row?.[key]) continue;
       await client.query(
-        "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb)",
+        "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb) " +
+        "ON CONFLICT (" + key + ") DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()",
         [row[key], JSON.stringify(row)]
       );
     }
+
     await client.query("COMMIT");
-    cache.set(collection,rows.map(row=>({...row})));
+    await refreshCache(collection);
   } catch(err) {
     await client.query("ROLLBACK");
     throw err;
