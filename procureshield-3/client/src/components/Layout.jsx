@@ -110,9 +110,19 @@ export default function Layout({ children }) {
             <span className="hidden items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:flex">
               <FlaskConical size={12} /> Demo Environment
             </span>
-            <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100">
+            <button
+              type="button"
+              onClick={() => navigate("/app/alerts")}
+              aria-label={alertCount ? `Open alerts, ${alertCount} available` : "Open alerts"}
+              title="Alerts"
+              className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100"
+            >
               <Bell size={18} />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+              {alertCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-4 text-white">
+                  {alertCount > 9 ? "9+" : alertCount}
+                </span>
+              )}
             </button>
             <div className="relative">
               <button
