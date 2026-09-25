@@ -110,19 +110,20 @@ export default function BidVerification() {
                 <th className="px-4 py-3">Submission Date</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Risk Score</th>
+                <th className="px-4 py-3">Bid PDF</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <Loader2 className="mx-auto animate-spin" />
                   </td>
                 </tr>
               ) : bids.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-sm text-slate-400">
                     No bids match your search/filters.
                   </td>
                 </tr>
@@ -140,6 +141,25 @@ export default function BidVerification() {
                     <td className="whitespace-nowrap px-4 py-3 text-slate-500">{b.submission_date}</td>
                     <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={b.verification_status} /></td>
                     <td className="whitespace-nowrap px-4 py-3"><RiskBadge score={b.risk_score} category={b.risk_category} /></td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!b.has_uploaded_pdf) return;
+                          try {
+                            const blob = await api.bidFile(b.bid_id, b.first_pdf_index || 0);
+                            downloadBlob(blob, b.first_pdf_name || "uploaded-bid.pdf");
+                          } catch (err) {
+                            window.alert(err.message || "Unable to download the original uploaded PDF.");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        title={b.has_uploaded_pdf ? "Download the exact PDF uploaded by the bidder" : "No uploaded PDF is available for this bid"}
+                      >
+                        <Download size={13} /> {b.has_uploaded_pdf ? "Uploaded PDF" : "No PDF"}
+                      </button>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600">
                         View Analysis <ChevronRight size={14} />
