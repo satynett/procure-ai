@@ -199,9 +199,11 @@ export default function BidIntelligence() {
 
   const resetTender = (id) => {
     setSelectedTenderId(id);
+    setFiles([]);
     setChecks([]);
     setAiAnalysis(null);
     setUploadErrors([]);
+    setError("");
   };
 
   return (
