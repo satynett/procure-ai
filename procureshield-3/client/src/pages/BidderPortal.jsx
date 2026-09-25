@@ -232,7 +232,7 @@ function TenderCard({ tender:t, onOpen, onBid }) {
   );
 }
 
-function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, onClose, onStartSubmit, onSubmit }) {
+function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, error, onClose, onStartSubmit, onSubmit }) {
   const isAwarded = t.status === "Awarded";
 
   return (
