@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Filter, Loader2, ChevronRight, Download } from "lucide-react";
 import { api } from "../api.js";
 import { RiskBadge, StatusBadge } from "../components/Badges.jsx";
-import { downloadBidPdf } from "../utils/bidPdf.js";
 
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -124,7 +123,7 @@ export default function BidVerification() {
                 </tr>
               ) : bids.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-sm text-slate-400">
                     No bids match your search/filters.
                   </td>
                 </tr>
@@ -145,14 +144,20 @@ export default function BidVerification() {
                     <td className="whitespace-nowrap px-4 py-3">
                       <button
                         type="button"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          downloadBidPdf({ bid: b });
+                          if (!b.has_uploaded_pdf) return;
+                          try {
+                            const blob = await api.bidFile(b.bid_id, b.first_pdf_index || 0);
+                            downloadBlob(blob, b.first_pdf_name || "uploaded-bid.pdf");
+                          } catch (err) {
+                            window.alert(err.message || "Unable to download the original uploaded PDF.");
+                          }
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:bg-brand-50"
-                        title="Download bid submission PDF"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        title={b.has_uploaded_pdf ? "Download the exact PDF uploaded by the bidder" : "No uploaded PDF is available for this bid"}
                       >
-                        <Download size={13} /> PDF
+                        <Download size={13} /> {b.has_uploaded_pdf ? "Uploaded PDF" : "No PDF"}
                       </button>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
