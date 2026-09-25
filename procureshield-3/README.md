@@ -68,10 +68,17 @@ npm run dev --prefix client    # Vite on :5173
 
 ### Docker
 
+The compose stack is self-contained: PostgreSQL, the Python engine, and the Node BFF.
+The BFF waits for both PostgreSQL and the engine health checks before starting.
+
 ```bash
 docker compose up --build
 open http://localhost:4000     # client and API served from one origin
 ```
+
+For the fastest CPU-only demo, the engine image installs the lightweight
+rules/anomaly dependencies by default. Install `engine/requirements-full.txt`
+locally only when you specifically need the PyTorch/PyG supervised GAT stack.
 
 ### Tests
 
@@ -84,52 +91,19 @@ npm run demo              # engine-only end-to-end demo on its own synthetic dat
 
 ## 3. Demo dataset
 
-`server/data/` holds 18 bidders and 163 bids across 38 tenders (~4.3 bidders per
-tender). Regenerate with:
+The demo database is seeded into PostgreSQL on first startup. The bidder network
+contains the current synthetic bidder set and dynamically calculated clusters;
+cluster IDs are generated from the current analysis and should **not** be treated
+as permanent demo identifiers.
 
-```bash
-npm run gen-data
-```
+For a presentation, open **Bidder Network Analysis** and select a currently
+shown relationship group or search for a company by name/bidder ID. Selecting a
+company shows its detected relationships and explicitly lists other companies
+with **No detected relationship** when no computed link exists.
 
-The generator is **tender-centric**: every tender is contested by several
-bidders. This matters — with single-bidder tenders the engine can only evaluate
-identity signals (shared director, shared address), and the behavioural signals
-that actually characterise bid rigging (cover bidding, winner rotation, repeat
-co-bidding, bid-price similarity) have nothing to work with.
-
-Planted scenario:
-
-| Group | Bidders | Pattern |
-|-------|---------|---------|
-| Ring (CLU-01) | BID-1001…1006 | Shared director, shared address, shared phone, wins rotate evenly, losing bids sit 2-8% above the winner |
-| CLU-02 | BID-1007, BID-1008 | Shared bank account only; bids normally |
-| Independents | BID-1009…1018 | Genuine competition, wide price spread |
-
-Four ring members carry `label: 1`; **two are deliberately left unlabelled** so
-you can watch the model score companies it was never told about. Independents
-carry `label: 0`. Bidders with no label are treated as unknown, not as clean —
-conflating the two would poison training.
-
-### What the engine produces on this data
-
-```
-mode                supervised_gat
-graph               95 nodes / 382 edges (18 companies, 38 tenders,
-                    13 people, 16 addresses, 101 CO_BID edges)
-CLU-01              79 / 100  CRITICAL  6 members
-                    sharedDirector, winnerRotation, coverBidPattern,
-                    denseSubgroup, repeatedCoBidding, bidPriceSimilarity,
-                    sharedAddress, sharedPhone
-CLU-02              19 / 100  LOW       2 members (sharedBank)
-independents        low scores, no cluster
-```
-
-Both label-withheld ring members score 78 — recovered from network structure
-alone.
-
----
-
-## 4. API
+The relationship fields used by the demo are synthetic and are intended only to
+exercise the investigation UI. They are not real-world findings about any
+company.\n\n## 4. API
 
 The client-facing API is unchanged in shape; its contents now come from the
 engine. All routes except `/api/auth/login` and `/api/health` need
@@ -205,7 +179,9 @@ score. Every score still comes from the engine.
 
 ## 6. Configuration
 
-Copy `.env.example` to `server/.env`. Key values:
+Use **`server/.env.example` as the single canonical environment template** and
+copy it to `server/.env`. Docker Compose supplies the container-specific
+PostgreSQL and engine values automatically; do not use a second root env file.
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
@@ -221,7 +197,18 @@ Engine internals (thresholds, model hyperparameters, risk bands) live in
 
 ---
 
-## 7. Changes made to the engine during integration
+## 7. Database and dependency notes
+
+PostgreSQL is the persistent application store. The local Docker stack creates
+it automatically and passes `DATABASE_URL=postgresql://postgres:postgres@postgres:5432/procureshield`
+to the BFF. The Node server waits for the database to become healthy before
+initialising tables and serving requests.
+
+The engine's default `requirements.txt` is intentionally lightweight. The
+optional `requirements-full.txt` adds PyTorch and PyTorch Geometric for
+supervised GAT training. Rules-only mode does not require those heavy packages.
+
+## 8. Changes made to the engine during integration
 
 Three additions, all backwards compatible; the engine's 97 tests still pass.
 
@@ -242,7 +229,7 @@ run" error.
 
 ---
 
-## 8. Known limits
+## 9. Known limits
 
 - **Prototype auth.** A static bearer token, no expiry, no per-user sessions.
 - **JSON files as a database.** Concurrent verification actions can race.
