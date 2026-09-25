@@ -13,6 +13,8 @@ import {
   LogOut,
   FlaskConical,
   PlusSquare,
+  Menu,
+  X,
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { Building2 } from "lucide-react";
@@ -36,6 +38,7 @@ export default function Layout({ children }) {
   const [query, setQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
+  const [launcherOpen, setLauncherOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -91,6 +94,51 @@ export default function Layout({ children }) {
           </div>
         </div>
       </aside>
+
+
+      {/* ProcureShield quick launcher */}
+      <div className="fixed right-5 top-20 z-50">
+        <button
+          type="button"
+          onClick={() => setLauncherOpen((v) => !v)}
+          aria-label="Open ProcureShield AI menu"
+          title="ProcureShield AI"
+          className="flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-left text-white shadow-lg transition hover:bg-slate-700"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700">
+            {launcherOpen ? <X size={17} /> : <ShieldCheck size={17} />}
+          </span>
+          <span className="pr-1">
+            <span className="block text-xs font-bold leading-tight">ProcureShield AI</span>
+            <span className="block text-[9px] leading-tight text-slate-400">GeM Verification System</span>
+          </span>
+        </button>
+
+        {launcherOpen && (
+          <div className="mt-2 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-200 px-3.5 py-2.5">
+              <div className="text-xs font-bold text-slate-800">Procurement tools</div>
+              <div className="text-[10px] text-slate-500">Quick access to officer workflows</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {NAV.map((item) => (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => {
+                    setLauncherOpen(false);
+                    navigate(item.to);
+                  }}
+                  className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2 text-center text-[10px] font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+                >
+                  <item.icon size={16} className="text-emerald-700" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
