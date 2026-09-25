@@ -493,7 +493,11 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
           document_error:true
         });
       }
-      validatedDocuments.push(filename);
+      validatedDocuments.push({
+        name: filename,
+        content_type: doc.content_type || "application/pdf",
+        content_base64: contentBase64
+      });
     } catch (err) {
       if(err instanceof EngineUnavailableError) throw err;
       return res.status(400).json({
@@ -515,7 +519,8 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
     bid_amount: amount,
     submission_date: new Date().toISOString().slice(0, 10),
     verification_status: "Needs Review",
-    submitted_documents: validatedDocuments.filter(Boolean),
+    submitted_documents: validatedDocuments.map((d) => d.name),
+    submitted_document_files: validatedDocuments.filter(Boolean),
   };
   bids.push(bid);
   await writeJson("bids.json", bids);
