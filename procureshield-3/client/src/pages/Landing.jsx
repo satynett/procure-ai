@@ -3,15 +3,13 @@ import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck, Share2, Users, ArrowRight, FlaskConical,
   Building2, BriefcaseBusiness, FileCheck2, SearchCheck, LockKeyhole,
-  Menu, X
 } from "lucide-react";
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [launcherOpen, setLauncherOpen] = React.useState(false);
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-100 text-slate-900">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       <header className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-6">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-white">
@@ -27,49 +25,8 @@ export default function Landing() {
         </span>
       </header>
 
-      <div className="fixed right-5 top-5 z-50">
-        {launcherOpen ? (
-          <div className="w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between bg-slate-800 px-3.5 py-2.5 text-white">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700"><ShieldCheck size={16} /></div>
-                <div>
-                  <div className="text-xs font-bold">ProcureShield AI</div>
-                  <div className="text-[9px] text-slate-300">GeM Verification System</div>
-                </div>
-              </div>
-              <button
-                onClick={() => setLauncherOpen(false)}
-                className="flex items-center gap-1 rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-bold text-white hover:bg-white/20"
-              >
-                <X size={12} /> Minimise
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 p-3">
-              <MiniAction label="Officer Command Center" onClick={() => navigate("/app/officer")} icon={Building2} />
-              <MiniAction label="Create Tender" onClick={() => navigate("/app/tenders/new")} icon={BriefcaseBusiness} />
-              <MiniAction label="Dashboard" onClick={() => navigate("/app/dashboard")} icon={FileCheck2} />
-              <MiniAction label="Bid Verification" onClick={() => navigate("/app/bid-verification")} icon={SearchCheck} />
-              <MiniAction label="Bidder Network" onClick={() => navigate("/app/bidder-network")} icon={Share2} />
-              <MiniAction label="Risk Analysis" onClick={() => navigate("/app/risk-analysis")} icon={ShieldCheck} />
-              <MiniAction label="Alerts" onClick={() => navigate("/app/alerts")} icon={LockKeyhole} />
-              <MiniAction label="Reports" onClick={() => navigate("/app/reports")} icon={FileCheck2} />
-              <MiniAction label="Settings" onClick={() => navigate("/app/settings")} icon={Users} />
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setLauncherOpen(true)}
-            title="Open ProcureShield menu"
-            aria-label="Open ProcureShield menu"
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-white shadow-xl ring-4 ring-white hover:bg-slate-700"
-          >
-            <Menu size={22} />
-          </button>
-        )}
-      </div>
 
-      <section className="mx-auto flex h-[calc(100vh-68px-128px)] max-w-4xl flex-col justify-center px-6 text-center">
+      <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-4xl flex-col justify-center px-6 py-8 text-center">
         <div className="mb-3 inline-flex self-center items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
           Smart India Hackathon Prototype
         </div>
@@ -115,7 +72,7 @@ export default function Landing() {
         </p>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-4">
+      <section className="mx-auto max-w-6xl px-6 pb-8">
         <div className="grid gap-4 sm:grid-cols-3">
           <FeatureCard icon={ShieldCheck} title="Automated Verification" desc="Reduce repetitive manual checklist verification with structured, explainable automated checks." />
           <FeatureCard icon={Share2} title="Network Analysis" desc="Identify relationships between bidders using multiple data signals — director, address, phone, and bank matches." />
@@ -123,7 +80,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="h-[44px] border-t border-slate-200 bg-slate-800 text-center text-[10px] text-slate-400">
+      <footer className="min-h-[44px] border-t border-slate-200 bg-slate-800 text-center text-[10px] text-slate-400">
         <div className="flex h-full items-center justify-center px-6">
           ProcureShield AI — Prototype for demonstration purposes only. Synthetic data. No live GeM API connectivity.
         </div>
@@ -144,14 +101,3 @@ function FeatureCard({ icon: Icon, title, desc }) {
   );
 }
 
-function MiniAction({ label, onClick, icon: Icon }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2 text-center text-[10px] font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
-    >
-      <Icon size={16} className="text-emerald-700" />
-      <span>{label}</span>
-    </button>
-  );
-}
