@@ -44,7 +44,12 @@ export default function BidderPortal() {
   }), [closedTenders, q, category]);
 
   async function submitBid() {
+    const amount = Number(bidAmount);
     if (!selected || !company.trim()) return;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Enter a valid bid amount greater than ₹0.");
+      return;
+    }
     setError(""); setMessage("");
     try {
       const result = await api.submitBid({
