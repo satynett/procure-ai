@@ -205,7 +205,7 @@ export default function BidIntelligence() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="min-h-screen bg-slate-100/80 py-6"><div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-start gap-3">
         <button onClick={() => navigate("/bidder")} className="rounded-lg border border-slate-200 bg-white p-2">
           <ArrowLeft size={17}/>
@@ -221,8 +221,8 @@ export default function BidIntelligence() {
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tender</label>
+      <section className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="border-l-4 border-emerald-600 bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-4"><div className="text-xs font-bold uppercase tracking-wider text-emerald-300">Government Procurement Portal</div><div className="mt-1 text-lg font-semibold text-white">Tender Document Compliance</div></div><div className="p-5"><label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select tender</label>
         <select
           value={selectedTenderId}
           onChange={(e) => resetTender(e.target.value)}
@@ -232,13 +232,13 @@ export default function BidIntelligence() {
           {loadingTenders ? <option>Loading tenders…</option> : tenders.map((t) => (
             <option key={t.tender_id} value={t.tender_id}>{t.tender_id} — {t.title}</option>
           ))}
-        </select>
+        </select></div>
 
         {selectedTender && (
         <>
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><FileCheck2 size={20}/></div>
+              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700"><FileCheck2 size={20}/></div>
               <div>
                 <h2 className="font-semibold text-slate-900">1. Upload your supporting documents</h2>
                 <p className="mt-1 text-sm text-slate-500">
@@ -355,7 +355,7 @@ export default function BidIntelligence() {
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg bg-slate-50 p-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs text-slate-500">Sandbox documents detected</div>
                 <div className="mt-1 text-xl font-bold text-slate-900">{detected.length}</div>
               </div>
@@ -385,7 +385,7 @@ export default function BidIntelligence() {
           <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-start justify-between gap-3 p-6">
               <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-slate-100 p-2 text-slate-700"><FileText size={20}/></div>
+                <div className="rounded-lg bg-blue-50 p-2 text-blue-700"><FileText size={20}/></div>
                 <div>
                   <h2 className="font-semibold text-slate-900">6. Actual published RFP</h2>
                   <p className="mt-1 text-sm text-slate-500">Review the source tender document after seeing how your uploaded evidence matched the sandbox checklist.</p>
@@ -411,7 +411,7 @@ export default function BidIntelligence() {
 
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><BrainCircuit size={20}/></div>
+              <div className="rounded-lg bg-blue-50 p-2 text-blue-700"><BrainCircuit size={20}/></div>
               <div>
                 <h2 className="font-semibold text-slate-900">7. AI analysis</h2>
                 <p className="mt-1 text-sm text-slate-500">A concise pre-bid explanation of what matched and what still needs attention.</p>
@@ -463,9 +463,10 @@ export default function BidIntelligence() {
         </>
       )}
 
-      <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500">
+      <div className="rounded-lg border border-slate-200 bg-slate-200/70 p-4 text-xs text-slate-600">
         Sandbox prototype. This is a pre-bid matching aid; official eligibility still requires procurement-officer verification.
       </div>
+    </div>
     </div>
   );
 }
