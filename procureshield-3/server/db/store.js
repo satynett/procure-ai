@@ -28,6 +28,7 @@ export async function initDatabase({ seed=true }={}) {
     "CREATE TABLE IF NOT EXISTS procure_bids (bid_id TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" +
     "CREATE TABLE IF NOT EXISTS procure_tenders (tender_id TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" +
     "CREATE TABLE IF NOT EXISTS procure_audit_logs (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" +
+    // Older local databases were created before audit logs had an updated_at column.\n    // Keep the schema backward-compatible so restarting the app never fails on an existing DB.\n    "ALTER TABLE procure_audit_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();" +
     "CREATE INDEX IF NOT EXISTS idx_procure_bids_tender ON procure_bids ((data->>'tender_id'));" +
     "CREATE INDEX IF NOT EXISTS idx_procure_bids_bidder ON procure_bids ((data->>'bidder_id'));" +
     "CREATE INDEX IF NOT EXISTS idx_procure_tenders_status ON procure_tenders ((data->>'status'));"
