@@ -49,7 +49,7 @@ export default function BidderNetwork() {
     const edges = [];
     const nodeIds = new Set();
 
-    raw.clusters.forEach((cluster, clusterIndex) => {
+    (selectedCluster ? [selectedCluster] : raw.clusters).forEach((cluster, clusterIndex) => {
       const members = raw.nodes.filter((n) => cluster.members.includes(n.bidder_id));
       const baseX = clusterIndex * 520;
       members.forEach((member, index) => {
@@ -91,7 +91,7 @@ export default function BidderNetwork() {
     });
 
     return { nodes, edges };
-  }, [raw]);
+  }, [raw, selectedCluster]);
 
   useEffect(() => {
     const focus = params.get("focus");
