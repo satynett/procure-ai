@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import ReactFlow, { Background, Controls, MarkerType, Handle, Position } from "reactflow";
 import "reactflow/dist/style.css";
-import { Building2, Loader2, X, ChevronRight } from "lucide-react";
+import { Building2, Loader2, X, ChevronRight, Search } from "lucide-react";
 import { api } from "../api.js";
 import { RiskBadge } from "../components/Badges.jsx";
 import { labelFor } from "../constants.js";
@@ -36,6 +36,7 @@ export default function BidderNetwork() {
   const [raw, setRaw] = useState(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -110,6 +111,19 @@ export default function BidderNetwork() {
   }
 
   const nameOf = (id) => raw.nodes.find((n) => n.bidder_id === id)?.company_name || id;
+  const searchResults = raw.nodes.filter((node) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return false;
+    return String(node.company_name || "").toLowerCase().includes(q) ||
+      String(node.bidder_id || "").toLowerCase().includes(q);
+  }).slice(0, 8);
+
+  const selectSearchCompany = (company) => {
+    setSelectedCompany(company);
+    const cluster = raw.clusters.find((c) => c.members.includes(company.bidder_id));
+    setSelectedCluster(cluster || null);
+    setSearchTerm(company.company_name);
+  };
 
   return (
     <div className="fade-in flex h-[calc(100vh-7rem)] min-h-[620px] flex-col gap-4">
@@ -138,7 +152,35 @@ export default function BidderNetwork() {
           )}
         </div>
 
-        <aside className="w-[360px] flex-shrink-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+        <aside className="w-[430px] flex-shrink-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+          <div className="mb-4">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Search bidder / company</label>
+            <div className="relative">
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchResults[0]) selectSearchCompany(searchResults[0]);
+                }}
+                placeholder="Company name or bidder ID..."
+                className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs text-slate-800 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              />
+            </div>
+            {searchTerm.trim() && searchResults.length > 0 && (
+              <div className="mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                {searchResults.map((company) => (
+                  <button key={company.bidder_id} type="button" onClick={() => selectSearchCompany(company)} className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50">
+                    <span className="min-w-0 truncate text-xs font-semibold text-slate-700">{company.company_name}</span>
+                    <span className="ml-2 flex-shrink-0 text-[10px] text-slate-400">{company.bidder_id}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchTerm.trim() && searchResults.length === 0 && (
+              <div className="mt-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">No bidder found.</div>
+            )}
+          </div>
           {selectedCompany ? (
             <CompanyPanel
               company={selectedCompany}
@@ -212,13 +254,17 @@ export default function BidderNetwork() {
 
 function CompanyPanel({ company, cluster, raw, onClose, navigate }) {
   const nameOf = (id) => raw.nodes.find((n) => n.bidder_id === id)?.company_name || id;
-  const related = cluster
-    ? cluster.members.filter((id) => id !== company.bidder_id).map((id) => ({
-        id,
-        name: nameOf(id),
-        edge: raw.edges.find((e) => (e.source === company.bidder_id && e.target === id) || (e.target === company.bidder_id && e.source === id)),
-      }))
-    : [];
+  const relationships = raw.nodes
+    .filter((node) => node.bidder_id !== company.bidder_id)
+    .map((node) => {
+      const edge = raw.edges.find((e) =>
+        (e.source === company.bidder_id && e.target === node.bidder_id) ||
+        (e.target === company.bidder_id && e.source === node.bidder_id)
+      );
+      return { ...node, edge };
+    })
+    .sort((a, b) => Number(Boolean(b.edge)) - Number(Boolean(a.edge)) || String(a.company_name).localeCompare(String(b.company_name)));
+  const relatedCount = relationships.filter((item) => item.edge).length;
 
   return (
     <div>
@@ -234,16 +280,33 @@ function CompanyPanel({ company, cluster, raw, onClose, navigate }) {
       </div>
 
       <div className="mt-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Related companies</h3>
-        <div className="mt-2 space-y-2">
-          {related.length === 0 && <p className="text-xs text-slate-400">No directly connected companies.</p>}
-          {related.map((item) => (
-            <div key={item.id} className="rounded-lg border border-slate-100 p-3">
-              <div className="font-semibold text-sm text-slate-800">{item.name}</div>
-              <div className="mt-1 text-[11px] text-slate-500">
-                {item.edge?.evidence?.map(labelFor).join(" · ") || "Relationship signal detected"}
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">All other companies</h3>
+          <span className="text-[10px] font-medium text-slate-400">{relatedCount} relationship{relatedCount === 1 ? "" : "s"} detected</span>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Companies without a computed link are shown explicitly as having no detected relationship.</p>
+        <div className="mt-2 overflow-hidden rounded-lg border border-slate-100">
+          {relationships.map((item) => (
+            <div key={item.bidder_id} className="border-b border-slate-100 p-3 last:border-b-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-800">{item.company_name}</div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">{item.bidder_id}</div>
+                </div>
+                {item.edge ? (
+                  <span className="flex-shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">Relationship detected</span>
+                ) : (
+                  <span className="flex-shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500">No detected relationship</span>
+                )}
               </div>
-              {item.edge && <div className="mt-1 text-[11px] font-semibold text-slate-600">Strength {item.edge.score}/100</div>}
+              {item.edge ? (
+                <div className="mt-2 text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-600">Evidence:</span> {item.edge.evidence?.map(labelFor).join(" · ") || "Relationship signal detected"}
+                  <span className="ml-2 font-semibold text-slate-600">Strength {item.edge.score}/100</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-[11px] text-slate-400">No shared relationship signal was computed in the current dataset.</div>
+              )}
             </div>
           ))}
         </div>
