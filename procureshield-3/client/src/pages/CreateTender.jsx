@@ -43,9 +43,7 @@ export default function CreateTender() {
         required_documents: [...new Set([...(acc.required_documents || []), ...(item.required_documents || [])])],
         technical_requirements: [...(acc.technical_requirements || []), ...(item.technical_requirements || [])],
         important_dates: [...new Set([...(acc.important_dates || []), ...(item.important_dates || [])])],
-        rfp_text: [acc.rfp_text, item.rfp_text].filter(Boolean).join("
-
-"),
+        rfp_text: [acc.rfp_text, item.rfp_text].filter(Boolean).join("\n\n"),
       }), { eligibility_requirements: [], required_documents: [], technical_requirements: [], important_dates: [], rfp_text: "" });
       setParsed(combined);
       setMessage(`${files.length} RFP document${files.length !== 1 ? "s" : ""} analyzed. Review the extracted checklist before saving or publishing.`);
