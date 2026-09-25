@@ -138,8 +138,9 @@ function asyncRoute(handler) {
 function decorateBid(bid, bidders, view) {
   const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
   const risk = view.riskMap[bid.bidder_id] || { score: 0, category: "Low" };
+  const { submitted_document_files, ...publicBid } = bid;
   return {
-    ...bid,
+    ...publicBid,
     bidder_name: bid.bidder_company_name || (bidder ? bidder.company_name : "Unknown"),
     msme_status: bidder ? bidder.msme_status : "Unknown",
     // The engine scores companies, not individual bids: a bid inherits the
@@ -698,7 +699,10 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
   });
 
   res.json({
-    bid: decorateBid(bid, bidders, view),
+    bid: {
+      ...decorateBid(bid, bidders, view),
+      submitted_document_files: Array.isArray(bid.submitted_document_files) ? bid.submitted_document_files : [],
+    },
     bidder: maskBidder(bidder),
     checklist: buildChecklist({ bidder, bid, evidenceForBidder }),
     riskAssessment: {
