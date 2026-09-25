@@ -513,13 +513,45 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
     }
   }
 
+  const bidders = getBidders();
+  const cleanCompanyName = company_name.trim();
+
+  // A company is a persistent bidder entity, not a new entity per bid.
+  // Reuse the existing bidder when the company name matches; otherwise create
+  // a new synthetic bidder profile so the engine can score and cluster it.
+  let bidder = bidders.find(
+    (item) => String(item.company_name || "").trim().toLowerCase() === cleanCompanyName.toLowerCase()
+  );
+
+  if (!bidder) {
+    const numericIds = bidders
+      .map((item) => Number(String(item.bidder_id || "").replace(/\\D/g, "")))
+      .filter(Number.isFinite);
+    const nextNumber = Math.max(1000, ...numericIds) + 1;
+    bidder = {
+      bidder_id: `BID-${nextNumber}`,
+      company_name: cleanCompanyName,
+      director_name: "Not provided",
+      address: "Not provided by bidder",
+      phone: "Not provided",
+      email: "Not provided",
+      gst_number: "Not provided",
+      pan_number: "Not provided",
+      bank_account: "",
+      msme_status: "Not provided",
+      bids: [],
+      label: null,
+    };
+    bidders.push(bidder);
+  }
+
   const bids = getBids();
   const sequence = bids.length + 1;
   const bid = {
     bid_id: `DEMO/BID/2026/${String(sequence).padStart(4, "0")}`,
     tender_id,
-    bidder_id: "BID-1001",
-    bidder_company_name: company_name.trim(),
+    bidder_id: bidder.bidder_id,
+    bidder_company_name: bidder.company_name,
     category: tender.category,
     bid_amount: amount,
     submission_date: new Date().toISOString().slice(0, 10),
@@ -528,8 +560,15 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
     submitted_document_files: validatedDocuments.filter(Boolean),
   };
   bids.push(bid);
+  bidder.bids = Array.isArray(bidder.bids) ? bidder.bids : [];
+  bidder.bids.push({ bid_id: bid.bid_id, category: bid.category });
+
+  await writeJson("bidders.json", bidders);
   await writeJson("bids.json", bids);
-  res.status(201).json({ success: true, bid });
+
+  // The next network/risk request will detect the changed dataset fingerprint
+  // and automatically run the engine again.
+  res.status(201).json({ success: true, bid, bidder_id: bidder.bidder_id });
 }));
 
 // ---------------------------------------------------------------------
