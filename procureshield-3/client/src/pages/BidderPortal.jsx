@@ -123,9 +123,17 @@ export default function BidderPortal() {
           </button>
         </section>
 
-        <section id="live-tenders" className="space-y-4">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div><h2 className="text-xl font-bold">Live Tenders <span className="text-sm font-normal text-slate-400">({openTenders.length})</span></h2><p className="text-sm text-slate-500">Only currently open tenders are shown here.</p></div>
+        <section id="live-tenders" className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+          <div className="border-b border-emerald-100 bg-emerald-50/70 px-5 py-4">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+                  <h2 className="text-xl font-bold text-slate-900">Live Tenders</h2>
+                  <span className="rounded-full bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white">{openTenders.length} Open</span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">Active procurement opportunities accepting bids.</p>
+              </div>
             <div className="flex gap-2">
               <div className="relative"><Search className="absolute left-3 top-2.5 text-slate-400" size={16}/><input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search" className="w-48 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm"/></div>
               <select value={category} onChange={(e)=>setCategory(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"><option value="">All categories</option>{categories.map(c=><option key={c}>{c}</option>)}</select>
@@ -134,9 +142,16 @@ export default function BidderPortal() {
           <div className="grid gap-4 lg:grid-cols-2">{filteredOpen.map(t=><TenderCard key={t.tender_id} tender={t} onOpen={()=>{setSelected(t);setShowSubmit(false)}} onBid={()=>{setSelected(t);setShowSubmit(true)}} />)}</div>
         </section>
 
-        <section className="space-y-4">
-          <div><h2 className="text-xl font-bold">Closed / Awarded Tenders <span className="text-sm font-normal text-slate-400">({closedTenders.length})</span></h2><p className="text-sm text-slate-500">Historical tenders with the recorded demo award outcome.</p></div>
-          <div className="grid gap-4 lg:grid-cols-2">{filteredClosed.map(t=><TenderCard key={t.tender_id} tender={t} onOpen={()=>{setSelected(t);setShowSubmit(false)}} />)}</div>
+        <section className="overflow-hidden rounded-2xl border border-slate-300 bg-slate-50 shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-200/70 px-5 py-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-slate-500" />
+              <h2 className="text-xl font-bold text-slate-800">Closed / Awarded Tenders</h2>
+              <span className="rounded-full bg-slate-600 px-2.5 py-1 text-xs font-bold text-white">{closedTenders.length} Closed</span>
+            </div>
+            <p className="mt-1 text-sm text-slate-600">Archived procurement records. Bidding is no longer available.</p>
+          </div>
+          <div className="grid gap-4 p-5 lg:grid-cols-2">{filteredClosed.map(t=><TenderCard key={t.tender_id} tender={t} onOpen={()=>{setSelected(t);setShowSubmit(false)}} />)}</div>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -156,8 +171,8 @@ export default function BidderPortal() {
 function TenderCard({ tender:t, onOpen, onBid }) {
   const isOpen = t.status === "Open";
   const statusClass = isOpen
-    ? "bg-emerald-50 text-emerald-700"
-    : "bg-slate-100 text-slate-600";
+    ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+    : "border border-slate-300 bg-slate-200 text-slate-700";
   const dateLabel = isOpen ? "Deadline" : "Closed";
   const valueLabel = isOpen ? "Est. value" : "Winner";
   const valueText = isOpen
@@ -165,11 +180,12 @@ function TenderCard({ tender:t, onOpen, onBid }) {
     : (t.winner_name || "—");
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <article className={"relative overflow-hidden rounded-xl border p-5 shadow-sm transition-shadow " + (isOpen ? "border-emerald-200 bg-white hover:shadow-md" : "border-slate-300 bg-slate-100/80")}>
+      <div className={"absolute left-0 top-0 h-1 w-full " + (isOpen ? "bg-emerald-600" : "bg-slate-500")} />
+      <div className="flex items-start justify-between gap-3 pt-1">
         <div>
-          <div className="text-xs font-semibold text-brand-600">{t.tender_id}</div>
-          <h3 className="mt-1 text-base font-bold">{t.title}</h3>
+          <div className={"text-xs font-bold tracking-wide " + (isOpen ? "text-blue-700" : "text-slate-500")}>{t.tender_id}</div>
+          <h3 className={"mt-1 text-base font-bold " + (isOpen ? "text-slate-900" : "text-slate-700")}>{t.title}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.department} · {t.category}</p>
         </div>
         <span className={"rounded-full px-2.5 py-1 text-xs font-semibold " + statusClass}>
@@ -195,17 +211,21 @@ function TenderCard({ tender:t, onOpen, onBid }) {
       <div className="mt-4 flex gap-2">
         <button
           onClick={onOpen}
-          className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold"
+          className={"flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold " + (isOpen ? "border border-slate-300 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-800" : "border border-slate-300 bg-white text-slate-600")}
         >
           View Details
         </button>
-        {isOpen && (
+        {isOpen ? (
           <button
             onClick={onBid}
-            className="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
+            className="flex-1 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
           >
             Bid Now
           </button>
+        ) : (
+          <span className="flex flex-1 items-center justify-center rounded-lg border border-slate-300 bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500">
+            Bidding Closed
+          </span>
         )}
       </div>
     </article>
