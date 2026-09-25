@@ -158,12 +158,13 @@ app.post("/api/auth/login", rateLimit({ windowMs: 60_000, max: 10 }), (req, res)
   const { username, password } = req.body || {};
   const expectedUser = process.env.DEMO_USERNAME || "admin";
   const expectedPass = process.env.DEMO_PASSWORD || "admin123";
+  const bidderUser = process.env.DEMO_BIDDER_USERNAME || "bidder";
+  const bidderPass = process.env.DEMO_BIDDER_PASSWORD || "bidder123";
   if (username === expectedUser && password === expectedPass) {
-    return res.json({
-      success: true,
-      token: DEMO_TOKEN,
-      officer: { name: "Procurement Officer 01", role: "Procurement Officer", org: "GeM Demo Cell" },
-    });
+    return res.json({ success: true, token: DEMO_TOKEN, officer: { name: "Procurement Officer 01", role: "Procurement Officer", org: "GeM Demo Cell" } });
+  }
+  if (username === bidderUser && password === bidderPass) {
+    return res.json({ success: true, token: DEMO_TOKEN, officer: { name: "Demo Bidder", role: "Bidder", org: "GeM Supplier Demo" } });
   }
   return res.status(401).json({ success: false, message: "Invalid demo credentials." });
 });
