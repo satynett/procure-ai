@@ -187,13 +187,15 @@ export default function Layout({ children }) {
               <button
                 type="button"
                 onClick={() => setProfileOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 hover:bg-slate-50"
+                aria-expanded={profileOpen}
+                aria-haspopup="menu"
+                className="flex min-w-0 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-2.5 py-1.5 text-left text-slate-100 transition-colors hover:border-white/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">
                   PO
                 </div>
-                <span className="hidden text-sm font-medium text-slate-700 sm:inline">{officer?.name || "Officer"}</span>
-                <ChevronDown size={14} className="text-slate-400" />
+                <span className="hidden max-w-[180px] truncate text-sm font-medium text-slate-100 sm:inline">{officer?.name || "Officer"}</span>
+                <ChevronDown size={14} className="flex-shrink-0 text-slate-300" />
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-slate-200 bg-white p-1 shadow-lg fade-in">
