@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import { ArrowLeft, FileCheck2, UploadCloud, AlertTriangle, CheckCircle2, XCircle, X } from "lucide-react";
+import { ArrowLeft, FileCheck2, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import DocumentDropzone from "../components/DocumentDropzone.jsx";
 import { useNavigate } from "react-router-dom";
 
 function encodeFile(file) {
@@ -31,69 +32,6 @@ const aliases = {
   "Quality certificate": ["Quality certificate"],
 };
 
-function DocumentDropzone({ files, onChange }) {
-  function addFiles(fileList) {
-    const incoming = Array.from(fileList || []).filter((file) =>
-      /^(application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/.test(file.type) ||
-      /\.(pdf|doc|docx)$/i.test(file.name)
-    );
-    const merged = [...files, ...incoming].filter((file, index, all) =>
-      all.findIndex((candidate) => candidate.name === file.name && candidate.size === file.size) === index
-    );
-    onChange(merged);
-  }
-
-  return (
-    <div
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files); }}
-      className="mx-auto mt-4 max-w-lg rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
-    >
-      <div className="text-sm font-semibold text-slate-700">Add documents</div>
-      <div className="mt-1 text-xs text-slate-500">Drop multiple PDFs or Word files here, or choose them.</div>
-      <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-brand-300">
-        <UploadCloud size={14} /> Choose files
-        <input
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx"
-          onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
-          className="sr-only"
-        />
-      </label>
-      {files.length > 0 && (
-        <div className="mt-3 space-y-1 text-left">
-          {files.map((file, index) => (
-            <div key={file.name + file.size + index} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-xs">
-              <span className="min-w-0 truncate font-medium text-slate-700">{file.name}</span>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-emerald-600">Selected</span>
-                <button type="button" onClick={() => onChange(files.filter((_, i) => i !== index))} className="text-slate-400 hover:text-red-500" aria-label={`Remove ${file.name}`}>
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Status({ value }) {
-  const cls = value === "valid" || value === "matched"
-    ? "bg-emerald-50 text-emerald-700"
-    : value === "missing"
-      ? "bg-red-50 text-red-700"
-      : "bg-amber-50 text-amber-700";
-  const label = value === "valid" || value === "matched"
-    ? "✓ Matched"
-    : value === "missing"
-      ? "✕ Missing"
-      : "⚠ Needs review";
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
-}
-
 export default function BidIntelligence() {
   const navigate = useNavigate();
   const [tenders, setTenders] = useState([]);
@@ -102,7 +40,7 @@ export default function BidIntelligence() {
   const [checks, setChecks] = useState([]);
   const [busy, setBusy] = useState(false);
   const [loadingTenders, setLoadingTenders] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState("");\n  const [uploadErrors, setUploadErrors] = useState([]);
 
   useEffect(() => {
     api.tenders("Open")
@@ -152,7 +90,7 @@ export default function BidIntelligence() {
   });
   const matched = checklist.filter((x) => x.matched).length;
   const missing = checklist.length - matched;
-  const valid = checks.filter((c) => c.status === "valid").length;
+  const valid = checks.filter((c) => c.status === "valid").length;\n  const wrong = checks.filter((c) => c.status === "wrong_document").length;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -199,17 +137,13 @@ export default function BidIntelligence() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-lg border-2 border-dashed border-slate-200 p-8 text-center">
-          <UploadCloud className="mx-auto text-slate-400" size={28}/>
-          <h3 className="mt-2 font-semibold">Upload your documents</h3>
-          <p className="mt-1 text-sm text-slate-500">GST, PAN, Udyam, experience, turnover, ISO, OEM authorization, EMD and other supporting PDFs.</p>
-          <input type="file" multiple accept=".pdf,.doc,.docx" onChange={e=>setFiles(Array.from(e.target.files||[]))} className="mx-auto mt-4 block max-w-md text-sm"/>
-          {files.length > 0 && (
-            <div className="mx-auto mt-3 max-w-lg space-y-1 text-left">
-              {files.map((f,i)=><div key={i} className="rounded bg-slate-50 px-3 py-2 text-sm">📄 {f.name}</div>)}
-            </div>
-          )}
-          <button disabled={!files.length || !selectedTender || busy} onClick={checkDocuments} className="mt-4 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        <div className="mt-5">
+          <DocumentDropzone files={files} errors={uploadErrors}
+            onChange={(next, rejected) => { setFiles(next); setUploadErrors(rejected); setChecks([]); }}
+            label="Upload your bid documents"
+            hint="Drag and drop multiple GST, PAN, Udyam, experience, turnover, ISO, OEM, EMD and other supporting documents."
+          />
+          <button disabled={!files.length || !selectedTender || busy} onClick={checkDocuments} className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
             {busy ? "Checking…" : "Check Against This Tender"}
           </button>
         </div>
@@ -252,7 +186,7 @@ export default function BidIntelligence() {
                 <h2 className="font-semibold">Document validation results</h2>
                 <p className="mt-1 text-sm text-slate-500">Each uploaded file is inspected before the tender checklist is matched.</p>
               </div>
-              <div className="text-sm font-semibold">{valid}/{checks.length} files readable</div>
+              <div className="text-sm font-semibold">{valid}/{checks.length} files readable{wrong ? ` · ${wrong} wrong document${wrong !== 1 ? "s" : ""}` : ""}</div>
             </div>
             <div className="mt-4 space-y-2">
               {checks.map((doc,i) => (
