@@ -22,6 +22,7 @@ export default function BidderPortal() {
   const [selected, setSelected] = useState(null);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [submissionSummary, setSubmissionSummary] = useState(null);
   const [company, setCompany] = useState("");
   const [bidAmount, setBidAmount] = useState("");
   const [documents, setDocuments] = useState([]);
@@ -70,31 +71,41 @@ export default function BidderPortal() {
         documents: await Promise.all(documents.map(async (file) => ({ name: file.name, content_type: file.type || "application/pdf", content_base64: await encodeFile(file) }))),
       });
       await load();
-      setMessage(`Bid ${result.bid.bid_id} submitted successfully. Status: Under Review.`);
+      setSubmissionSummary({
+        bid: result.bid,
+        tender: selected,
+        company,
+        bidAmount: amount,
+        documents: documents.map((file) => file.name),
+        submittedAt: new Date().toLocaleString("en-IN"),
+      });
+      setMessage("");
       setShowSubmit(false);
+      setSelected(null);
       setDocuments([]);
       setUploadErrors([]);
       setBidAmount("");
+      setCompany("");
     } catch (e) { setError(e.message); }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <header className="border-b border-slate-700 bg-slate-800 text-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div><div className="text-lg font-bold">ProcureShield</div><div className="text-xs text-slate-500">Bidder Portal</div></div>
+          <div><div className="text-lg font-bold">ProcureShield</div><div className="text-xs text-slate-300">Government Procurement · Bidder Portal</div></div>
           <div className="flex gap-2">
-            <button onClick={() => navigate("/bidder/documents")} className="flex items-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white"><FileCheck2 size={16}/> Check My Documents</button>
-            <button onClick={() => setShowHistory(true)} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-brand-300"><History size={16}/> My Bids</button>
+            <button onClick={() => navigate("/bidder/documents")} className="flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"><FileCheck2 size={16}/> Check My Documents</button>
+            <button onClick={() => setShowHistory(true)} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-blue-300"><History size={16}/> My Bids</button>
             <button onClick={() => navigate("/")} className="rounded-lg px-3 py-2 text-sm text-slate-500">Switch portal</button>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-7">
-        <section className="rounded-2xl bg-navy-950 p-7 text-white">
+        <section className="rounded-2xl border border-slate-700 bg-gradient-to-r from-slate-800 to-slate-700 p-7 text-white shadow-sm">
           <div className="max-w-3xl">
-            <div className="text-xs font-semibold uppercase tracking-widest text-brand-300">For bidders & suppliers</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-emerald-300">For bidders & suppliers</div>
             <h1 className="mt-2 text-3xl font-bold">Submit a bid or check your documents.</h1>
             <p className="mt-3 text-sm leading-6 text-slate-300">Tenders are published by procurement officers. You can view the officer-uploaded RFP and submit only your own bid documents.</p>
           </div>
@@ -105,7 +116,7 @@ export default function BidderPortal() {
 
         <section className="grid gap-4 md:grid-cols-2">
           <button onClick={() => document.getElementById("live-tenders")?.scrollIntoView({behavior:"smooth"})} className="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-brand-300">
-            <FileText className="text-brand-600" size={20}/><h2 className="mt-3 font-bold">Submit a Bid</h2><p className="mt-1 text-sm text-slate-500">Browse officer-published tenders, view the RFP and upload your bid documents.</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">Browse tenders <ArrowRight size={13}/></span>
+            <FileText className="text-blue-700" size={20}/><h2 className="mt-3 font-bold">Submit a Bid</h2><p className="mt-1 text-sm text-slate-500">Browse officer-published tenders, view the RFP and upload your bid documents.</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-800">Browse tenders <ArrowRight size={13}/></span>
           </button>
           <button onClick={() => navigate("/bidder/documents")} className="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-brand-300">
             <ShieldCheck className="text-brand-600" size={20}/><h2 className="mt-3 font-bold">Check My Documents</h2><p className="mt-1 text-sm text-slate-500">Upload your documents separately to find missing, invalid or review-required items before bidding.</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">Open checker <ArrowRight size={13}/></span>
@@ -136,6 +147,7 @@ export default function BidderPortal() {
 
       {selected && <TenderModal tender={selected} submitting={showSubmit} company={company} setCompany={setCompany} bidAmount={bidAmount} setBidAmount={setBidAmount} documents={documents} setDocuments={setDocuments} uploadErrors={uploadErrors} setUploadErrors={setUploadErrors} onClose={()=>{setSelected(null);setShowSubmit(false)}} onStartSubmit={()=>setShowSubmit(true)} onSubmit={submitBid}/>}
       {showHistory && <BidHistoryModal bids={myBids} onClose={()=>setShowHistory(false)}/>}
+      {submissionSummary && <SubmissionSuccessModal summary={submissionSummary} onClose={()=>setSubmissionSummary(null)}/>}
       <footer className="border-t border-slate-200 bg-white px-6 py-5 text-center text-xs text-slate-500">Prototype / sandbox data. The officer and bidder portals read the same tender and bid data.</footer>
     </div>
   );
@@ -320,6 +332,61 @@ function RfpViewer({ tender: t }) {
           {pdfUrl ? <iframe title={t.rfp_filename || "Officer RFP"} src={pdfUrl} className="h-[520px] w-full rounded-lg border border-slate-200" /> : <div className="rounded-lg bg-slate-50 p-4"><div className="text-sm font-semibold text-slate-700">RFP preview</div><pre className="mt-3 max-h-[520px] overflow-auto whitespace-pre-wrap text-sm leading-6 text-slate-600">{t.rfp_text || t.eligibility_summary || "No RFP preview is available."}</pre></div>}
         </div>
       )}
+    </div>
+  );
+}
+
+function SubmissionSuccessModal({ summary, onClose }) {
+  const bid = summary.bid || {};
+  const tender = summary.tender || {};
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-700 bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-5 text-white">
+          <div className="text-xs font-bold uppercase tracking-wider text-emerald-300">Government Procurement Portal</div>
+          <div className="mt-1 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold">Bid Submitted Successfully</h2>
+              <p className="mt-1 text-sm text-slate-300">Your submitted details have been recorded for review.</p>
+            </div>
+            <div className="rounded-full bg-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/30">Under Review</div>
+          </div>
+        </div>
+
+        <div className="space-y-5 p-6">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Info label="Bid ID" value={bid.bid_id || "Generated after submission"} />
+            <Info label="Submitted on" value={summary.submittedAt} />
+            <Info label="Tender ID" value={tender.tender_id || bid.tender_id || "—"} />
+            <Info label="Tender" value={tender.title || bid.tender_title || "—"} />
+            <Info label="Department" value={tender.department || "—"} />
+            <Info label="Company / Bidder" value={summary.company || bid.bidder_name || "—"} />
+            <Info label="Quoted amount" value={summary.bidAmount ? "₹" + Number(summary.bidAmount).toLocaleString("en-IN") : "—"} />
+            <Info label="Review status" value={bid.verification_status || "Under Review"} />
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Submitted documents</div>
+            <div className="mt-3 space-y-2">
+              {summary.documents.length ? summary.documents.map((name) => (
+                <div key={name} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                  <FileCheck2 size={16} className="text-emerald-700" />
+                  <span className="truncate">{name}</span>
+                </div>
+              )) : <div className="text-sm text-slate-500">No documents were attached.</div>}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="font-semibold">What happens next?</div>
+            <p className="mt-1 leading-6">Your bid is now recorded and can proceed to the procurement officer's verification workflow. This confirmation does not represent final eligibility or award.</p>
+          </div>
+
+          <button onClick={onClose} className="w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">
+            Done
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
