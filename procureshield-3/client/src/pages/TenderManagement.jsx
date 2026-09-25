@@ -19,7 +19,6 @@ export default function TenderManagement() {
   const [selectedBid,setSelectedBid]=useState("");
   const [bidderHistory,setBidderHistory]=useState(null);
   const [awardAmount,setAwardAmount]=useState("");
-  const [aiExpanded,setAiExpanded]=useState(false);
 
   async function load() {
     try { setError(""); setData(await api.officerTenderDetail(tenderId)); }
@@ -162,55 +161,30 @@ function Overview({t,data,bids,onBidders}) {
 }
 
 function RfpTab({t,onView}) {
- const [aiExpanded,setAiExpanded]=useState(false);
- const ai=t.ai_analysis;
- return <div className="space-y-5">
-   <div className="grid gap-5 lg:grid-cols-2">
-     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-       <h2 className="font-semibold">Published RFP</h2><p className="mt-1 text-sm text-slate-500">{t.rfp_filename}</p>
-       <button onClick={onView} className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold"><ExternalLink size={15} className="mr-1 inline"/>Open RFP PDF</button>
-     </section>
-     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-       <h2 className="font-semibold">Extracted requirements</h2>
-       <div className="mt-4 space-y-2">
-         {(t.required_documents||[]).map(x=><div key={x} className="flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm"><CheckCircle2 size={15} className="text-emerald-600"/>{x}</div>)}
-         {(t.eligibility_requirements||[]).map(x=><div key={x.requirement} className="rounded-lg border border-slate-100 p-3 text-sm"><b>{x.requirement}</b><div className="text-xs text-slate-500">{x.type}</div></div>)}
-       </div>
-     </section>
-   </div>
+ return <div className="grid gap-5 lg:grid-cols-2">
    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-     <div className="flex flex-wrap items-start justify-between gap-3">
-       <div>
-         <div className="flex items-center gap-2"><h2 className="font-semibold">AI RFP Understanding</h2>{ai?.enabled && <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">OpenRouter · {ai.model}</span>}</div>
-         <p className="mt-1 text-sm text-slate-500">AI interprets the extracted RFP; deterministic requirements remain the compliance source.</p>
-       </div>
-       {ai && <button onClick={()=>setAiExpanded(v=>!v)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">{aiExpanded?"Hide details":"View AI details"}</button>}
+     <h2 className="font-semibold">Published RFP</h2><p className="mt-1 text-sm text-slate-500">{t.rfp_filename}</p>
+     <button onClick={onView} className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold"><ExternalLink size={15} className="mr-1 inline"/>Open RFP PDF</button>
+   </section>
+   <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+     <h2 className="font-semibold">Extracted requirements</h2>
+     <div className="mt-4 space-y-2">
+       {(t.required_documents||[]).map(x=><div key={x} className="flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm"><CheckCircle2 size={15} className="text-emerald-600"/>{x}</div>)}
+       {(t.eligibility_requirements||[]).map(x=><div key={x.requirement} className="rounded-lg border border-slate-100 p-3 text-sm"><b>{x.requirement}</b><div className="text-xs text-slate-500">{x.type}</div></div>)}
      </div>
-     {!ai && <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-500">AI analysis is not available for this tender. The deterministic parser remains active.</div>}
-     {ai?.enabled && <div className="mt-4 space-y-4">
-       <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">{ai.summary || "No AI summary available."}</div>
-       {aiExpanded && <div className="grid gap-4 lg:grid-cols-2">
-         <AiList title="AI eligibility interpretation" items={ai.eligibility_requirements||[]} />
-         <AiList title="AI technical interpretation" items={ai.technical_requirements||[]} />
-         <AiDocs items={ai.required_documents||[]} />
-         <AiUncertainties items={ai.uncertainties||[]} />
-       </div>}
-     </div>}
    </section>
  </div>;
 }
-function AiList({title,items}){return <section className="rounded-lg border border-slate-100 p-4"><h3 className="text-sm font-semibold">{title}</h3><div className="mt-3 space-y-2">{items.length?items.map((x,i)=><div key={i} className="rounded-lg bg-slate-50 p-3 text-sm"><div className="font-medium text-slate-800">{x.requirement}</div><div className="mt-1 text-xs text-slate-500">{x.type}{x.mandatory===false?" · conditional":" · mandatory"}{x.minimum_value!=null?" · min "+x.minimum_value+" "+(x.unit||""):""}</div></div>):<div className="text-sm text-slate-400">No items detected.</div>}</div></section>}
-function AiDocs({items}){return <section className="rounded-lg border border-slate-100 p-4"><h3 className="text-sm font-semibold">AI-required documents</h3><div className="mt-3 flex flex-wrap gap-2">{items.length?items.map(x=><span key={x} className="rounded-full bg-slate-50 px-3 py-1.5 text-xs text-slate-600">{x}</span>):<span className="text-sm text-slate-400">No documents detected.</span>}</div></section>}
-function AiUncertainties({items}){return <section className="rounded-lg border border-amber-100 bg-amber-50/50 p-4"><h3 className="text-sm font-semibold text-amber-900">AI review flags</h3><div className="mt-3 space-y-2">{items.length?items.map((x,i)=><div key={i} className="flex gap-2 text-sm text-amber-900"><AlertTriangle size={15} className="mt-0.5 shrink-0"/><span>{x}</span></div>):<div className="text-sm text-amber-800">No uncertainties detected.</div>}</div></section>}
 
 function BiddersTab({bids,t,onAward,onHistory}) {
  return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-   <div className="flex items-center justify-between"><div><h2 className="font-semibold">Bidder participation & history</h2><p className="mt-1 text-sm text-slate-500">Email, quote, government estimate, verification and risk are shown for this tender.</p></div></div>
+   <div className="flex items-center justify-between gap-3"><div><h2 className="font-semibold">Bid evaluation & bidder history</h2><p className="mt-1 text-sm text-slate-500">Ranked using compliance, price competitiveness and relationship-risk review signals.</p></div></div>
+   <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">Evaluation score: 50% compliance · 30% price competitiveness · 20% risk review. This ranking supports officer review and does not automatically select the winner.</div>
    <div className="mt-4 overflow-x-auto">
-    <table className="min-w-full text-left text-sm"><thead><tr className="border-b text-xs text-slate-500"><th className="p-3">Bidder</th><th className="p-3">Email</th><th className="p-3">Submitted</th><th className="p-3">Bidder quote</th><th className="p-3">Gov. estimate</th><th className="p-3">Status</th><th className="p-3">Risk</th><th className="p-3"></th></tr></thead>
-    <tbody>{bids.length ? bids.map(b=><tr key={b.bid_id} className="border-b border-slate-100 align-top"><td className="p-3"><button onClick={()=>onHistory(b.bidder_id)} className="text-left"><div className="font-semibold text-brand-700 hover:underline">{b.bidder_name}</div><div className="text-xs text-slate-500">{b.gst_number}</div><div className="mt-1 text-[11px] text-brand-600">View bidder history</div></button></td><td className="p-3">{b.bidder_email}</td><td className="p-3">{b.submission_date||"—"}</td><td className="p-3 font-semibold">{money(b.quoted_amount)}</td><td className="p-3">{money(b.government_estimated_value)}</td><td className="p-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass(b.verification_status)}`}>{b.verification_status}</span></td><td className="p-3">{b.risk_score}/100 · {b.risk_category}</td><td className="p-3"><button onClick={()=>onAward(b)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold">Select for Award</button></td></tr>):<tr><td colSpan="8" className="p-8 text-center text-sm text-slate-400">No bids have been submitted for this tender yet.</td></tr>}</tbody></table>
+    <table className="min-w-full text-left text-sm"><thead><tr className="border-b text-xs text-slate-500"><th className="p-3">Rank</th><th className="p-3">Bidder</th><th className="p-3">Bidder quote</th><th className="p-3">Compliance</th><th className="p-3">Evaluation</th><th className="p-3">Status</th><th className="p-3">Risk</th><th className="p-3"></th></tr></thead>
+    <tbody>{bids.length ? bids.map(b=><tr key={b.bid_id} className="border-b border-slate-100 align-top"><td className="p-3"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-brand-50 px-2 text-xs font-bold text-brand-700">#{b.rank}</span></td><td className="p-3"><button onClick={()=>onHistory(b.bidder_id)} className="text-left"><div className="font-semibold text-brand-700 hover:underline">{b.bidder_name}</div><div className="text-xs text-slate-500">{b.gst_number}</div><div className="mt-1 text-[11px] text-brand-600">View bidder history</div></button></td><td className="p-3 font-semibold">{money(b.quoted_amount)}</td><td className="p-3">{b.finalComparison?.score ?? "—"}%</td><td className="p-3"><div className="font-bold text-slate-800">{b.evaluation_score ?? "—"}/100</div><div className="text-[11px] text-slate-500">{b.ranking_components ? `C ${b.ranking_components.compliance} · P ${b.ranking_components.price_competitiveness} · R ${b.ranking_components.risk_review}` : ""}</div></td><td className="p-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass(b.verification_status)}`}>{b.verification_status}</span></td><td className="p-3">{b.risk_score}/100 · {b.risk_category}</td><td className="p-3"><button onClick={()=>onAward(b)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold">Select for Award</button></td></tr>):<tr><td colSpan="8" className="p-8 text-center text-sm text-slate-400">No bids have been submitted for this tender yet.</td></tr>}</tbody></table>
    </div>
-   <p className="mt-4 text-xs text-slate-500">A bidder's full cross-tender history remains available through Bid Verification and Bidder Network. This table is the history for the selected tender.</p>
+   <p className="mt-4 text-xs text-slate-500">The officer can inspect documents, bidder history, network relationships and risk signals before awarding. Final award remains a human decision.</p>
  </section>;
 }
 

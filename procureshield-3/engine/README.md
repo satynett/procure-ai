@@ -72,6 +72,9 @@ Dockerfile      python:3.11-slim image serving uvicorn on :8000
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
+# Optional: enable the supervised GAT / PyTorch stack when needed.
+pip install -r requirements-full.txt
+
 # optional: Neo4j driver for the persistent graph backend
 pip install -r requirements-optional.txt
 ```
@@ -83,7 +86,7 @@ the official index first, then `pip install -r requirements.txt`.
 
 ```bash
 python run_demo.py                  # synthetic data -> graph -> GAT -> scores
-python run_demo.py --no-model       # deterministic rules only (no torch needed)
+python run_demo.py --no-model       # deterministic rules-only mode (no torch needed)
 python run_demo.py --csv demo.csv   # also write the dataset to CSV
 ```
 

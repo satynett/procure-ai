@@ -48,6 +48,19 @@ bidders[3].address = bidders[0].address;
 bidders[1].phone = bidders[0].phone;
 bidders[2].bank_account = bidders[0].bank_account;
 
+// Additional synthetic relationship groups keep the demo network from
+// collapsing into one central cluster. All identities are fictional.
+bidders[5].director_name = bidders[4].director_name;
+bidders[6].address = bidders[4].address;
+bidders[5].phone = bidders[4].phone;
+
+bidders[8].director_name = bidders[7].director_name;
+bidders[9].address = bidders[7].address;
+bidders[8].bank_account = bidders[7].bank_account;
+
+bidders[11].director_name = bidders[10].director_name;
+bidders[12].address = bidders[10].address;
+
 const tenderTemplates = [
   ["Network Security Equipment & Installation","Department of Information Technology","IT Hardware",5200000],
   ["District Hospital Patient Monitoring Equipment","State Health Services Department","Medical Equipment",6800000],

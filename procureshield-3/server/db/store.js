@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 dotenv.config();
 import pg from "pg";
 import { seedData, makeRfpPdfBase64 } from "./seed.js";
-import { initGovernmentSandbox } from "../sandbox/governmentSeed.js";
 
 const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
@@ -29,6 +28,7 @@ export async function initDatabase({ seed=true }={}) {
     "CREATE TABLE IF NOT EXISTS procure_bids (bid_id TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" +
     "CREATE TABLE IF NOT EXISTS procure_tenders (tender_id TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" +
     "CREATE TABLE IF NOT EXISTS procure_audit_logs (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" +
+    // Older local databases were created before audit logs had an updated_at column.\n    // Keep the schema backward-compatible so restarting the app never fails on an existing DB.\n    "ALTER TABLE procure_audit_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();" +
     "CREATE INDEX IF NOT EXISTS idx_procure_bids_tender ON procure_bids ((data->>'tender_id'));" +
     "CREATE INDEX IF NOT EXISTS idx_procure_bids_bidder ON procure_bids ((data->>'bidder_id'));" +
     "CREATE INDEX IF NOT EXISTS idx_procure_tenders_status ON procure_tenders ((data->>'status'));"
@@ -48,7 +48,35 @@ export async function initDatabase({ seed=true }={}) {
     await refreshCache(collection);
   }
 
-  await initGovernmentSandbox(pool, getCollection("bidders"), { seed });
+  // Keep the existing database aligned with the synthetic multi-cluster
+  // network used by the demo. This only changes fictional relationship fields.
+  const networkDemoLinks = [
+    ["BID-2002", { director_name: "Amit Verma" }],
+    ["BID-2003", { address: "12, Industrial Area, New Delhi, Delhi" }],
+    ["BID-2004", { address: "12, Industrial Area, New Delhi, Delhi" }],
+    ["BID-2006", { director_name: "Vivek Rao" }],
+    ["BID-2007", { address: "16, Industrial Area, Pune, Maharashtra" }],
+    ["BID-2009", { director_name: "Ananya Menon" }],
+    ["BID-2010", { address: "19, Industrial Area, Jaipur, Rajasthan" }],
+    ["BID-2012", { director_name: "Aditya Tiwari" }],
+    ["BID-2013", { address: "22, Industrial Area, Ahmedabad, Gujarat" }],
+  ];
+  const bidderRows = getCollection("bidders");
+  let bidderLinksChanged = false;
+  for (const [bidderId, patch] of networkDemoLinks) {
+    const row = bidderRows.find((item) => item.bidder_id === bidderId);
+    if (!row) continue;
+    for (const [field, value] of Object.entries(patch)) {
+      if (row[field] !== value) {
+        row[field] = value;
+        bidderLinksChanged = true;
+      }
+    }
+  }
+  if (bidderLinksChanged) {
+    await replaceCollection("bidders", bidderRows);
+    console.log("PostgreSQL: applied synthetic multi-cluster relationship links.");
+  }
 
   // Existing demo rows were originally stored as plain-text base64.
   // Convert only those rows to real PDF bytes; never touch an already uploaded PDF.
@@ -87,17 +115,106 @@ export async function replaceCollection(collection, rows) {
   const table=TABLES[collection], key=KEY_FIELDS[collection], client=await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("DELETE FROM " + table);
+
+    // IMPORTANT: never rebuild a collection with DELETE + INSERT.
+    // The UI works with array-shaped snapshots, but PostgreSQL is the
+    // persistent source of truth. A DELETE here used to erase newly-created
+    // bids/bidders whenever another route wrote a stale snapshot back.
+    //
+    // Upsert only the records explicitly changed by the caller. Existing
+    // records that are not present in this snapshot remain untouched.
     for (const row of rows) {
       if (!row?.[key]) continue;
+      const upsertSql = collection === "auditLog"
+        ? "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb) " +
+          "ON CONFLICT (" + key + ") DO UPDATE SET data = EXCLUDED.data"
+        : "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb) " +
+          "ON CONFLICT (" + key + ") DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()";
+      await client.query(upsertSql, [row[key], JSON.stringify(row)]);
+    }
+
+    await client.query("COMMIT");
+    await refreshCache(collection);
+  } catch(err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+
+export async function createBidSubmission({ companyName, bidData }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Serialize bidder creation so two rapid submissions cannot generate the
+    // same BID-* primary key from the same cached dataset.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('procureshield-bidder-create'))");
+
+    const existing = await client.query(
+      "SELECT data FROM procure_bidders WHERE lower(trim(data->>'company_name')) = lower(trim($1)) LIMIT 1 FOR UPDATE",
+      [companyName]
+    );
+
+    let bidder;
+    if (existing.rowCount) {
+      bidder = existing.rows[0].data;
+    } else {
+      const ids = await client.query(
+        "SELECT COALESCE(MAX(NULLIF(regexp_replace(bidder_id, '\\D', '', 'g'), '')::bigint), 1000) AS max_id FROM procure_bidders"
+      );
+      const nextNumber = Number(ids.rows[0].max_id || 1000) + 1;
+      bidder = {
+        bidder_id: `BID-${nextNumber}`,
+        company_name: companyName,
+        director_name: null,
+        address: null,
+        phone: null,
+        email: null,
+        gst_number: null,
+        pan_number: null,
+        bank_account: "",
+        msme_status: "Not provided",
+        bids: [],
+        label: null,
+      };
       await client.query(
-        "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb)",
-        [row[key], JSON.stringify(row)]
+        "INSERT INTO procure_bidders (bidder_id, data) VALUES ($1, $2::jsonb)",
+        [bidder.bidder_id, JSON.stringify(bidder)]
       );
     }
+
+    const bidIdResult = await client.query(
+      "SELECT COALESCE(MAX(NULLIF(regexp_replace(bid_id, '\\D', '', 'g'), '')::bigint), 0) AS max_id FROM procure_bids WHERE bid_id LIKE 'DEMO/BID/%'"
+    );
+    const sequence = Number(bidIdResult.rows[0].max_id || 0) + 1;
+    const bid = {
+      ...bidData,
+      bid_id: `DEMO/BID/2026/${String(sequence).padStart(4, "0")}`,
+      bidder_id: bidder.bidder_id,
+      bidder_company_name: bidder.company_name,
+    };
+
+    const updatedBidder = {
+      ...bidder,
+      bids: [...(Array.isArray(bidder.bids) ? bidder.bids : []), { bid_id: bid.bid_id, category: bid.category }],
+    };
+
+    await client.query(
+      "UPDATE procure_bidders SET data = $1::jsonb, updated_at = NOW() WHERE bidder_id = $2",
+      [JSON.stringify(updatedBidder), bidder.bidder_id]
+    );
+    await client.query(
+      "INSERT INTO procure_bids (bid_id, data) VALUES ($1, $2::jsonb)",
+      [bid.bid_id, JSON.stringify(bid)]
+    );
+
     await client.query("COMMIT");
-    cache.set(collection,rows.map(row=>({...row})));
-  } catch(err) {
+    await refreshCache("bidders");
+    await refreshCache("bids");
+    return { bidder: updatedBidder, bid };
+  } catch (err) {
     await client.query("ROLLBACK");
     throw err;
   } finally {

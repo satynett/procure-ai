@@ -1,269 +1,149 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import ReactFlow, { Background, Controls, MarkerType, Handle, Position } from "reactflow";
 import "reactflow/dist/style.css";
-import {
-  Building2, User, MapPin, Phone, Landmark, Hash, CreditCard,
-  Loader2, Search as SearchIcon, X, ChevronRight,
-} from "lucide-react";
+import { Building2, Loader2, X, ChevronRight, Search } from "lucide-react";
 import { api } from "../api.js";
 import { RiskBadge } from "../components/Badges.jsx";
 import { labelFor } from "../constants.js";
 
-const ADDRESS_STOPWORDS = new Set(["delhi", "new", "road", "street", "nagar", "pune", "sector"]);
-
-function addressCoreTokens(address = "") {
-  const words = address
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 1 && !ADDRESS_STOPWORDS.has(w));
-  return new Set(words);
-}
-
-function groupBy(items, keyFn) {
-  const map = new Map();
-  items.forEach((item) => {
-    const key = keyFn(item);
-    if (!key) return;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(item);
-  });
-  return map;
-}
-
-const ATTR_ICON = {
-  director: User,
-  address: MapPin,
-  phone: Phone,
-  bank: Landmark,
-  gst: Hash,
-  pan: CreditCard,
-};
-const ATTR_COLOR = {
-  director: "bg-purple-500",
-  address: "bg-orange-500",
-  phone: "bg-cyan-500",
-  bank: "bg-red-500",
-  gst: "bg-teal-500",
-  pan: "bg-indigo-500",
-};
-
-function BidderNode({ data }) {
+function CompanyNode({ data }) {
   return (
     <div
       onClick={data.onClick}
-      className={`flex w-56 cursor-pointer items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 shadow-md transition-transform hover:scale-105 ${
-        data.riskCategory === "High" || data.riskCategory === "Critical"
-          ? "border-red-400"
-          : data.riskCategory === "Medium"
-          ? "border-amber-400"
-          : "border-slate-200"
-      }`}
+      className="w-60 cursor-pointer rounded-xl border-2 border-slate-200 bg-white p-3 shadow-md hover:border-brand-300"
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
-        <Building2 size={16} />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-xs font-semibold text-slate-800">{data.label}</div>
-        <div className="text-[10px] text-slate-400">{data.riskCategory} · {data.riskScore}</div>
+      <div className="flex items-center gap-2">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
+          <Building2 size={17} />
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-xs font-bold text-slate-800">{data.label}</div>
+          <div className="text-[10px] text-slate-500">Risk {data.riskScore}/100 · {data.riskCategory}</div>
+        </div>
       </div>
     </div>
   );
 }
 
-function AttrNode({ data }) {
-  const Icon = ATTR_ICON[data.attrType] || Hash;
-  return (
-    <div
-      onClick={data.onClick}
-      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm hover:scale-105"
-    >
-      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
-      <div className={`flex h-5 w-5 items-center justify-center rounded-full text-white ${ATTR_COLOR[data.attrType]}`}>
-        <Icon size={11} />
-      </div>
-      <span className="text-[10px] font-medium text-slate-600">{data.label}</span>
-    </div>
-  );
-}
-
-const nodeTypes = { bidder: BidderNode, attr: AttrNode };
+const nodeTypes = { company: CompanyNode };
 
 export default function BidderNetwork() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [raw, setRaw] = useState(null);
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null); // {kind: 'bidder'|'attr'|'cluster', ...}
-  const [investigation, setInvestigation] = useState(null);
-  const [investigating, setInvestigating] = useState(false);
 
   useEffect(() => {
-    api.network().then((res) => {
-      setRaw(res);
-      setLoading(false);
-    });
+    api.network().then(setRaw).finally(() => setLoading(false));
   }, []);
 
-  const { nodes, edges, clusters, unclusteredCount } = useMemo(() => {
-    if (!raw) return { nodes: [], edges: [], clusters: [], unclusteredCount: 0 };
+  const graph = useMemo(() => {
+    if (!raw) return { nodes: [], edges: [] };
 
-    const clusterMap = new Map();
-    raw.clusters.forEach((c) => clusterMap.set(c.cluster_id, c));
+    const nodes = [];
+    const edges = [];
+    const nodeIds = new Set();
 
-    const nodesOut = [];
-    const edgesOut = [];
-    const clusterSpacingX = 700;
-    let clusterIdx = 0;
-
-    raw.clusters.forEach((cluster) => {
+    (selectedCluster ? [selectedCluster] : raw.clusters).forEach((cluster, clusterIndex) => {
       const members = raw.nodes.filter((n) => cluster.members.includes(n.bidder_id));
-      const cx = clusterIdx * clusterSpacingX;
-      const cy = 0;
-      const R = 230;
-      const n = members.length;
-
-      members.forEach((m, i) => {
-        const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-        const x = cx + R * Math.cos(angle);
-        const y = cy + R * Math.sin(angle) + 300;
-        nodesOut.push({
-          id: m.bidder_id,
-          type: "bidder",
-          position: { x, y },
+      const baseX = clusterIndex * 520;
+      members.forEach((member, index) => {
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        nodeIds.add(member.bidder_id);
+        nodes.push({
+          id: member.bidder_id,
+          type: "company",
+          position: { x: baseX + col * 285, y: 80 + row * 150 },
           data: {
-            label: m.company_name,
-            riskCategory: m.risk_category,
-            riskScore: m.risk_score,
-            onClick: () => setSelected({ kind: "bidder", bidder: m, cluster }),
+            label: member.company_name,
+            riskScore: member.risk_score,
+            riskCategory: member.risk_category,
+            onClick: () => {
+              setSelectedCompany(member);
+              setSelectedCluster(cluster);
+            },
           },
         });
       });
-
-      // sub-group by strong attributes within this cluster
-      const attrGroups = [
-        { type: "director", key: (m) => m.director_name, label: (v) => `Director: ${v}` },
-        { type: "phone", key: (m) => m.phone, label: (v) => `Phone: ${m0(members, "phone", v).phone_masked}` },
-        { type: "bank", key: (m) => m.bank_account, label: () => `Shared Bank Account` },
-        {
-          type: "address",
-          key: (m) => Array.from(addressCoreTokens(m.address)).sort().join("|") || null,
-          label: () => `Shared Address`,
-        },
-      ];
-
-      let attrOffset = 0;
-      attrGroups.forEach((ag) => {
-        const groups = groupBy(members, ag.key);
-        groups.forEach((groupMembers) => {
-          if (groupMembers.length < 2) return;
-          const angle = (2 * Math.PI * attrOffset) / 6 + Math.PI / 6;
-          attrOffset++;
-          const rx = cx + 90 * Math.cos(angle);
-          const ry = cy + 90 * Math.sin(angle) + 300;
-          const attrId = `attr-${cluster.cluster_id}-${ag.type}-${attrOffset}`;
-          nodesOut.push({
-            id: attrId,
-            type: "attr",
-            position: { x: rx, y: ry },
-            data: {
-              attrType: ag.type,
-              label: ag.label(ag.key(groupMembers[0])),
-              onClick: () =>
-                setSelected({
-                  kind: "attr",
-                  attrType: ag.type,
-                  members: groupMembers,
-                  cluster,
-                }),
-            },
-          });
-          groupMembers.forEach((gm) => {
-            edgesOut.push({
-              id: `${attrId}-${gm.bidder_id}`,
-              source: attrId,
-              target: gm.bidder_id,
-              type: "straight",
-              style: { stroke: "#cbd5e1", strokeWidth: 1.5 },
-              markerEnd: { type: MarkerType.ArrowClosed, color: "#cbd5e1", width: 14, height: 14 },
-            });
-          });
-        });
-      });
-
-      clusterIdx++;
     });
 
-    const clusteredIds = new Set(raw.clusters.flatMap((c) => c.members));
-    const unclusteredCount = raw.nodes.filter((n) => !clusteredIds.has(n.bidder_id)).length;
+    raw.edges.forEach((edge) => {
+      if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) return;
+      const labels = (edge.evidence || []).slice(0, 2).map(labelFor).join(" · ");
+      edges.push({
+        id: `${edge.source}-${edge.target}`,
+        source: edge.source,
+        target: edge.target,
+        type: "smoothstep",
+        label: labels || "Relationship signal",
+        labelStyle: { fontSize: 9, fontWeight: 600, fill: "#475569" },
+        labelBgStyle: { fill: "#ffffff", fillOpacity: 0.95 },
+        labelBgPadding: [4, 3],
+        style: { stroke: "#94a3b8", strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#94a3b8", width: 16, height: 16 },
+      });
+    });
 
-    return { nodes: nodesOut, edges: edgesOut, clusters: raw.clusters, unclusteredCount };
-  }, [raw]);
+    return { nodes, edges };
+  }, [raw, selectedCluster]);
 
   useEffect(() => {
     const focus = params.get("focus");
     if (focus && raw) {
-      const bidder = raw.nodes.find((n) => n.bidder_id === focus);
+      const company = raw.nodes.find((n) => n.bidder_id === focus);
       const cluster = raw.clusters.find((c) => c.members.includes(focus));
-      if (bidder) setSelected({ kind: "bidder", bidder, cluster });
-    }
-    if (params.get("demo") === "1" && raw && raw.clusters.length > 0) {
-      const top = raw.clusters[0];
-      setSelected({ kind: "cluster", cluster: top });
+      if (company) {
+        setSelectedCompany(company);
+        setSelectedCluster(cluster || null);
+      }
     }
   }, [params, raw]);
 
-  const investigate = useCallback(async (cluster) => {
-    setSelected({ kind: "cluster", cluster });
-    setInvestigating(true);
-    setInvestigation(null);
-    const memberNames = cluster.members.map((id) => raw.nodes.find((n) => n.bidder_id === id)?.company_name);
-    // The engine owns the narrative; the server looks it up by cluster id.
-    const res = await api.aiAnalyze("investigation_summary", {
-      clusterId: cluster.cluster_id,
-    });
-    setInvestigation(res);
-    setInvestigating(false);
-  }, [raw]);
-
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center text-slate-400">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+  if (loading || !raw) {
+    return <div className="flex h-64 items-center justify-center text-slate-400"><Loader2 className="animate-spin" /></div>;
   }
 
+  const nameOf = (id) => raw.nodes.find((n) => n.bidder_id === id)?.company_name || id;
+  const searchResults = raw.nodes.filter((node) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return false;
+    return String(node.company_name || "").toLowerCase().includes(q) ||
+      String(node.bidder_id || "").toLowerCase().includes(q);
+  }).slice(0, 8);
+
+  const selectSearchCompany = (company) => {
+    setSelectedCompany(company);
+    const cluster = raw.clusters.find((c) => c.members.includes(company.bidder_id));
+    setSelectedCluster(cluster || null);
+    setSearchTerm(company.company_name);
+  };
+
   return (
-    <div className="fade-in flex h-[calc(100vh-7rem)] flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Bidder Network Analysis</h1>
-          <p className="text-sm text-slate-500">
-            {clusters.length} potential network{clusters.length !== 1 ? "s" : ""} detected · {unclusteredCount} independent bidders show no significant relationship signals
-          </p>
-        </div>
+    <div className="fade-in flex h-[calc(100vh-7rem)] min-h-[620px] flex-col gap-4">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Bidder Network Analysis</h1>
+        <p className="text-sm text-slate-500">Each box is a company. Lines are labelled with the relationship signal connecting the two companies.</p>
       </div>
 
-      <div className="flex flex-1 gap-4 overflow-hidden">
-        <div className="flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
-          {nodes.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              No suspicious relationships detected in the current dataset.
-            </div>
+      <div className="flex min-h-0 flex-1 gap-4">
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+          {graph.nodes.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">No relationship groups detected.</div>
           ) : (
             <ReactFlow
-              nodes={nodes}
-              edges={edges}
+              nodes={graph.nodes}
+              edges={graph.edges}
               nodeTypes={nodeTypes}
               fitView
-              fitViewOptions={{ padding: 0.28, minZoom: 0.2, maxZoom: 1.2 }}
+              fitViewOptions={{ padding: 0.2, minZoom: 0.25, maxZoom: 1.1 }}
               minZoom={0.2}
-              defaultEdgeOptions={{ animated: false }}
               proOptions={{ hideAttribution: true }}
             >
               <Background gap={20} color="#eef2f7" />
@@ -272,189 +152,183 @@ export default function BidderNetwork() {
           )}
         </div>
 
-        {/* Side panel */}
-        <div className="w-96 flex-shrink-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-          {!selected ? (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">Suspicious Clusters</h3>
-              <div className="space-y-2">
-                {clusters.map((c) => (
-                  <ClusterCard key={c.cluster_id} cluster={c} raw={raw} onInvestigate={() => investigate(c)} />
-                ))}
-                {clusters.length === 0 && <p className="text-sm text-slate-400">No clusters detected.</p>}
-              </div>
-              <p className="mt-4 text-xs text-slate-400">Click any node in the graph to inspect its details.</p>
+        <aside className="w-[430px] flex-shrink-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+          <div className="mb-4">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">Search bidder / company</label>
+            <div className="relative">
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchResults[0]) selectSearchCompany(searchResults[0]);
+                }}
+                placeholder="Company name or bidder ID..."
+                className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs text-slate-800 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              />
             </div>
-          ) : selected.kind === "bidder" ? (
-            <BidderPanel data={selected} onClose={() => setSelected(null)} onInvestigate={investigate} navigate={navigate} />
-          ) : selected.kind === "attr" ? (
-            <AttrPanel data={selected} onClose={() => setSelected(null)} />
-          ) : (
-            <ClusterPanel
-              data={selected}
+            {searchTerm.trim() && searchResults.length > 0 && (
+              <div className="mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                {searchResults.map((company) => (
+                  <button key={company.bidder_id} type="button" onClick={() => selectSearchCompany(company)} className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50">
+                    <span className="min-w-0 truncate text-xs font-semibold text-slate-700">{company.company_name}</span>
+                    <span className="ml-2 flex-shrink-0 text-[10px] text-slate-400">{company.bidder_id}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchTerm.trim() && searchResults.length === 0 && (
+              <div className="mt-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">No bidder found.</div>
+            )}
+          </div>
+          {selectedCompany ? (
+            <CompanyPanel
+              company={selectedCompany}
+              cluster={selectedCluster}
               raw={raw}
-              onClose={() => setSelected(null)}
-              investigation={investigation}
-              investigating={investigating}
+              onClose={() => setSelectedCompany(null)}
               navigate={navigate}
             />
+          ) : (
+            <>
+              <div className="mb-3">
+                <h2 className="text-sm font-semibold text-slate-800">Relationship Groups</h2>
+                <p className="mt-1 text-xs text-slate-500">Each group is built from calculated relationship signals; unrelated bidders remain outside clusters.</p>
+              </div>
+              <div className="space-y-3">
+                {raw.clusters.map((cluster) => (
+                  <button
+                    key={cluster.cluster_id}
+                    type="button"
+                    onClick={() => setSelectedCluster(cluster)}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50/30"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-slate-800">{cluster.cluster_id}</span>
+                      <RiskBadge score={cluster.risk_score} category={cluster.risk_category} />
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {cluster.members.map((id) => (
+                        <div key={id} className="text-xs font-semibold text-slate-700">{nameOf(id)}</div>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {(cluster.signal_breakdown || []).slice(0, 3).map((signal) => (
+                        <span key={signal.code} className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                          {signal.label || labelFor(signal.code)}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <div className="mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Other Bidders</h3>
+                  <p className="mt-1 text-[11px] text-slate-500">Companies with no linkable relationship signal in the current analysis.</p>
+                </div>
+                <div className="space-y-1.5">
+                  {raw.nodes
+                    .filter((node) => !node.cluster_id)
+                    .map((node) => (
+                      <button
+                        key={node.bidder_id}
+                        type="button"
+                        onClick={() => setSelectedCompany(node)}
+                        className="flex w-full items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-left hover:border-brand-200 hover:bg-slate-50"
+                      >
+                        <span className="min-w-0 truncate text-xs font-semibold text-slate-700">{node.company_name}</span>
+                        <span className="ml-2 text-[10px] font-medium text-slate-400">Standalone</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </>
           )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function CompanyPanel({ company, cluster, raw, onClose, navigate }) {
+  const nameOf = (id) => raw.nodes.find((n) => n.bidder_id === id)?.company_name || id;
+  const relationships = raw.nodes
+    .filter((node) => node.bidder_id !== company.bidder_id)
+    .map((node) => {
+      const edge = raw.edges.find((e) =>
+        (e.source === company.bidder_id && e.target === node.bidder_id) ||
+        (e.target === company.bidder_id && e.source === node.bidder_id)
+      );
+      return { ...node, edge };
+    })
+    .sort((a, b) => Number(Boolean(b.edge)) - Number(Boolean(a.edge)) || String(a.company_name).localeCompare(String(b.company_name)));
+  const relatedCount = relationships.filter((item) => item.edge).length;
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-800">Company Relationship Details</h2>
+        <button type="button" onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+      </div>
+
+      <div className="rounded-xl bg-slate-50 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Selected company</div>
+        <div className="mt-1 text-sm font-bold text-slate-900">{company.company_name}</div>
+        <div className="mt-2"><RiskBadge score={company.risk_score} category={company.risk_category} /></div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">All other companies</h3>
+          <span className="text-[10px] font-medium text-slate-400">{relatedCount} relationship{relatedCount === 1 ? "" : "s"} detected</span>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Companies without a computed link are shown explicitly as having no detected relationship.</p>
+        <div className="mt-2 overflow-hidden rounded-lg border border-slate-100">
+          {relationships.map((item) => (
+            <div key={item.bidder_id} className="border-b border-slate-100 p-3 last:border-b-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-800">{item.company_name}</div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">{item.bidder_id}</div>
+                </div>
+                {item.edge ? (
+                  <span className="flex-shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">Relationship detected</span>
+                ) : (
+                  <span className="flex-shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500">No detected relationship</span>
+                )}
+              </div>
+              {item.edge ? (
+                <div className="mt-2 text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-600">Evidence:</span> {item.edge.evidence?.map(labelFor).join(" · ") || "Relationship signal detected"}
+                  <span className="ml-2 font-semibold text-slate-600">Strength {item.edge.score}/100</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-[11px] text-slate-400">No shared relationship signal was computed in the current dataset.</div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
-    </div>
-  );
-}
 
-function m0(members, field, value) {
-  return members.find((m) => m[field] === value) || {};
-}
-
-function ClusterCard({ cluster, raw, onInvestigate }) {
-  const names = cluster.members.map((id) => raw.nodes.find((n) => n.bidder_id === id)?.company_name).join(", ");
-  return (
-    <div className="rounded-lg border border-slate-100 p-3">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-700">{cluster.cluster_id}</span>
-        <RiskBadge score={cluster.risk_score} category={cluster.risk_category} />
-      </div>
-      <p className="mb-2 text-xs text-slate-500">{names}</p>
-      <button onClick={onInvestigate} className="w-full rounded-md bg-navy-900 py-1.5 text-xs font-semibold text-white hover:bg-navy-800">
-        Investigate Cluster
-      </button>
-    </div>
-  );
-}
-
-function PanelHeader({ title, onClose }) {
-  return (
-    <div className="mb-3 flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-      <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-100">
-        <X size={16} />
-      </button>
-    </div>
-  );
-}
-
-function BidderPanel({ data, onClose, onInvestigate, navigate }) {
-  const { bidder, cluster } = data;
-  return (
-    <div>
-      <PanelHeader title="Bidder Details" onClose={onClose} />
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
-        <Building2 size={18} />
-      </div>
-      <h4 className="text-sm font-bold text-slate-900">{bidder.company_name}</h4>
-      <div className="mt-3 space-y-2 text-xs">
-        <Row label="Director" value={bidder.director_name} />
-        <Row label="Address" value={bidder.address} />
-        <Row label="Phone" value={bidder.phone_masked} />
-        <Row label="Bank Account" value={bidder.bank_account_masked} />
-        <Row label="GST" value={bidder.gst_number} />
-        <Row label="PAN" value={bidder.pan_number} />
-        <Row label="MSME Status" value={bidder.msme_status} />
-      </div>
-      <div className="mt-3">
-        <RiskBadge score={bidder.risk_score} category={bidder.risk_category} />
-      </div>
       {cluster && (
-        <button
-          onClick={() => onInvestigate(cluster)}
-          className="mt-3 w-full rounded-md bg-navy-900 py-2 text-xs font-semibold text-white hover:bg-navy-800"
-        >
-          Investigate Cluster {cluster.cluster_id}
-        </button>
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">{cluster.cluster_id} companies</h3>
+          <div className="mt-2 space-y-1">
+            {cluster.members.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => navigate(`/app/bid-verification?q=${encodeURIComponent(nameOf(id))}`)}
+                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                {nameOf(id)} <ChevronRight size={13} className="text-slate-400" />
+              </button>
+            ))}
+          </div>
+        </div>
       )}
-      <button
-        onClick={() => navigate(`/app/bid-verification?q=${encodeURIComponent(bidder.company_name)}`)}
-        className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-      >
-        View Bids <ChevronRight size={13} />
-      </button>
-    </div>
-  );
-}
-
-function AttrPanel({ data, onClose }) {
-  const { attrType, members } = data;
-  return (
-    <div>
-      <PanelHeader title={`Shared ${attrType}`} onClose={onClose} />
-      <p className="mb-3 text-xs text-slate-500">
-        {members.length} bidders are linked through this shared attribute.
-      </p>
-      <div className="space-y-2">
-        {members.map((m) => (
-          <div key={m.bidder_id} className="rounded-lg border border-slate-100 p-2 text-xs">
-            <div className="font-semibold text-slate-800">{m.company_name}</div>
-            {attrType === "director" && <div className="text-slate-500">{m.director_name}</div>}
-            {attrType === "address" && <div className="text-slate-500">{m.address}</div>}
-            {attrType === "phone" && <div className="text-slate-500">{m.phone_masked}</div>}
-            {attrType === "bank" && <div className="text-slate-500">{m.bank_account_masked}</div>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ClusterPanel({ data, raw, onClose, investigation, investigating, navigate }) {
-  const { cluster } = data;
-  const members = cluster.members.map((id) => raw.nodes.find((n) => n.bidder_id === id));
-  return (
-    <div>
-      <PanelHeader title={`${cluster.cluster_id} — Investigation`} onClose={onClose} />
-      <div className="mb-3 flex items-center justify-between">
-        <RiskBadge score={cluster.risk_score} category={cluster.risk_category} />
-        <span className="text-xs font-medium text-slate-500">Requires Manual Review</span>
-      </div>
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Connected Bidders</h4>
-      <ul className="mb-3 space-y-1 text-sm text-slate-700">
-        {members.map((m) => (
-          <li key={m.bidder_id}>{m.company_name}</li>
-        ))}
-      </ul>
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Common Attributes</h4>
-      <ul className="mb-3 space-y-1 text-xs text-slate-600">
-        {cluster.evidence.map((e) => {
-          const s = (cluster.signal_breakdown || []).find((x) => x.code === e);
-          return (
-            <li key={e}>
-              • {labelFor(e)}
-              {s ? ` (strength ${(s.severity * 100).toFixed(0)}%)` : " (evidence only)"}
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="mb-3 rounded-lg bg-slate-50 p-3">
-        <h4 className="mb-1 text-xs font-semibold text-slate-700">Engine Investigation Summary</h4>
-        {investigating ? (
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Loader2 size={13} className="animate-spin" /> Retrieving engine analysis...
-          </div>
-        ) : investigation ? (
-          <p className="text-xs leading-relaxed text-slate-600">{investigation.narrative}</p>
-        ) : (
-          <p className="text-xs text-slate-400">No summary generated yet.</p>
-        )}
-      </div>
-
-      <button
-        onClick={() => navigate(`/app/bid-verification?q=${encodeURIComponent(members[0]?.company_name || "")}`)}
-        className="w-full rounded-md bg-brand-600 py-2 text-xs font-semibold text-white hover:bg-brand-700"
-      >
-        Open Related Bids
-      </button>
-    </div>
-  );
-}
-
-function Row({ label, value }) {
-  return (
-    <div className="flex items-start justify-between gap-2">
-      <span className="text-slate-400">{label}</span>
-      <span className="text-right font-medium text-slate-700">{value}</span>
     </div>
   );
 }

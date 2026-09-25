@@ -47,7 +47,6 @@ export const api = {
   deleteTender: (tenderId) => request(`/officer/tenders/${encodeURIComponent(tenderId)}`, { method: "DELETE" }),
   submitBid: (payload) => request("/bidder/bids", { method: "POST", body: JSON.stringify(payload) }),
   bidderBids: () => request("/bidder/bids"),
-  governmentVerification: (bidderId) => request(`/gov/verify/${encodeURIComponent(bidderId)}`),
   bids: (params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     return request(`/bids?${qs.toString()}`);
@@ -59,7 +58,8 @@ export const api = {
   reportCsv: (type) => requestBlob(`/reports/${type}/csv`),
   bidDetail: (bidId) => request(`/bids/${encodeURIComponent(bidId)}`),
   bidders: () => request("/bidders"),
-  bidderDetail: (bidderId) => request(`/bidders/${bidderId}`),
+  bidderDetail: (bidderId) => request(`/bidders/${encodeURIComponent(bidderId)}`),
+  bidFile: (bidId, index = 0) => requestBlob(`/bids/${encodeURIComponent(bidId)}/files/${index}`),
   network: () => request("/network"),
   networkForBidder: (bidderId) => request(`/network/${bidderId}`),
   cluster: (clusterId) => request(`/network/cluster/${clusterId}`),
@@ -82,7 +82,7 @@ export const api = {
   intelligencePdf: (payload) => request("/intelligence/pdf", { method: "POST", body: JSON.stringify(payload) }),
   intelligenceRequirements: (text) => request("/intelligence/requirements", { method: "POST", body: JSON.stringify({ text }) }),
   intelligenceValidateDocument: (payload) => request("/intelligence/validate-document", { method: "POST", body: JSON.stringify(payload) }),
+  intelligenceEligibility: (payload) => request("/intelligence/eligibility", { method: "POST", body: JSON.stringify(payload) }),
   intelligenceAIRequirements: (text) => request("/intelligence/ai-requirements", { method: "POST", body: JSON.stringify({ text }) }),
   intelligenceAIDocumentCheck: (payload) => request("/intelligence/ai-document-check", { method: "POST", body: JSON.stringify(payload) }),
-  intelligenceEligibility: (payload) => request("/intelligence/eligibility", { method: "POST", body: JSON.stringify(payload) }),
 };
