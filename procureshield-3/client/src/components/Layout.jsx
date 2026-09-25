@@ -52,11 +52,11 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-100">
       {/* Sidebar */}
-      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-navy-950 text-slate-200 md:flex">
+      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-800 text-slate-200 md:flex">
         <div className="flex items-center gap-2 border-b border-white/10 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700">
             <ShieldCheck size={20} className="text-white" />
           </div>
           <div>
@@ -73,7 +73,7 @@ export default function Layout({ children }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-brand-600 text-white shadow-sm"
+                    ? "bg-emerald-700 text-white shadow-sm"
                     : "text-slate-300 hover:bg-white/5 hover:text-white"
                 }`
               }
@@ -95,14 +95,14 @@ export default function Layout({ children }) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
-        <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
+        <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 md:px-6">
           <form onSubmit={handleSearch} className="relative w-full max-w-md">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search bid ID, bidder, director, GST, PAN, address..."
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-100"
             />
           </form>
 
@@ -115,7 +115,7 @@ export default function Layout({ children }) {
               onClick={() => navigate("/app/alerts")}
               aria-label={alertCount ? `Open alerts, ${alertCount} available` : "Open alerts"}
               title="Alerts"
-              className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100"
+              className="relative rounded-full p-2 text-slate-300 hover:bg-white/10"
             >
               <Bell size={18} />
               {alertCount > 0 && (
@@ -129,7 +129,7 @@ export default function Layout({ children }) {
                 onClick={() => setProfileOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 hover:bg-slate-50"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">
                   PO
                 </div>
                 <span className="hidden text-sm font-medium text-slate-700 sm:inline">{officer?.name || "Officer"}</span>
