@@ -14,7 +14,6 @@ import {
   FlaskConical,
   PlusSquare,
   PanelLeftClose,
-  PanelLeftOpen,
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { Building2 } from "lucide-react";
@@ -109,33 +108,6 @@ export default function Layout({ children }) {
             />
           )}
         </button>
-
-        {sidebarOpen && (
-          <div className="px-3 pt-3">
-            <button
-              type="button"
-              onClick={() => navigate("/app/tenders/new")}
-              className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-500/40 hover:bg-emerald-700/20"
-            >
-              <PlusSquare size={16} className="text-emerald-400" />
-              <span>New Tender</span>
-            </button>
-          </div>
-        )}
-
-        {!sidebarOpen && (
-          <div className="px-2 pt-3">
-            <button
-              type="button"
-              onClick={() => navigate("/app/tenders/new")}
-              aria-label="Create new tender"
-              title="New Tender"
-              className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-emerald-400 transition hover:border-emerald-500/40 hover:bg-emerald-700/20 hover:text-white"
-            >
-              <PlusSquare size={17} />
-            </button>
-          </div>
-        )}
 
         <nav className={`flex-1 space-y-1 overflow-y-auto py-3 ${
           sidebarOpen ? "px-3" : "px-2"
