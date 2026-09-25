@@ -58,15 +58,46 @@ export default function Layout({ children }) {
     <div className="flex h-screen bg-slate-100">
       {/* Sidebar */}
       <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-800 text-slate-200 md:flex">
-        <div className="flex items-center gap-2 border-b border-white/10 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700">
-            <ShieldCheck size={20} className="text-white" />
+        <button
+          type="button"
+          onClick={() => setLauncherOpen((v) => !v)}
+          aria-label="Open ProcureShield AI menu"
+          title="ProcureShield AI"
+          className="flex w-full items-center gap-2 border-b border-white/10 px-5 py-5 text-left transition hover:bg-white/5"
+        >
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-700">
+            {launcherOpen ? <X size={20} className="text-white" /> : <ShieldCheck size={20} className="text-white" />}
           </div>
           <div>
             <div className="text-sm font-bold leading-tight text-white">ProcureShield AI</div>
             <div className="text-[11px] leading-tight text-slate-400">GeM Verification System</div>
           </div>
-        </div>
+        </button>
+
+        {launcherOpen && (
+          <div className="mx-3 mt-2 rounded-xl border border-white/10 bg-slate-900/80 p-2 shadow-lg">
+            <div className="px-2 py-1.5">
+              <div className="text-[10px] font-bold text-slate-300">Procurement tools</div>
+              <div className="text-[9px] text-slate-500">Quick access to officer workflows</div>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {NAV.map((item) => (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => {
+                    setLauncherOpen(false);
+                    navigate(item.to);
+                  }}
+                  className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center text-[9px] font-semibold text-slate-300 transition hover:border-emerald-500/50 hover:bg-emerald-700/20 hover:text-white"
+                >
+                  <item.icon size={14} className="text-emerald-400" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV.map((item) => (
@@ -96,51 +127,7 @@ export default function Layout({ children }) {
       </aside>
 
 
-      {/* ProcureShield quick launcher */}
-      <div className="fixed right-5 top-20 z-50">
-        <button
-          type="button"
-          onClick={() => setLauncherOpen((v) => !v)}
-          aria-label="Open ProcureShield AI menu"
-          title="ProcureShield AI"
-          className="flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-left text-white shadow-lg transition hover:bg-slate-700"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700">
-            {launcherOpen ? <X size={17} /> : <ShieldCheck size={17} />}
-          </span>
-          <span className="pr-1">
-            <span className="block text-xs font-bold leading-tight">ProcureShield AI</span>
-            <span className="block text-[9px] leading-tight text-slate-400">GeM Verification System</span>
-          </span>
-        </button>
-
-        {launcherOpen && (
-          <div className="mt-2 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="border-b border-slate-200 px-3.5 py-2.5">
-              <div className="text-xs font-bold text-slate-800">Procurement tools</div>
-              <div className="text-[10px] text-slate-500">Quick access to officer workflows</div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 p-3">
-              {NAV.map((item) => (
-                <button
-                  key={item.to}
-                  type="button"
-                  onClick={() => {
-                    setLauncherOpen(false);
-                    navigate(item.to);
-                  }}
-                  className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2 text-center text-[10px] font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
-                >
-                  <item.icon size={16} className="text-emerald-700" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Main column */}
+      {/* Main column */
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 md:px-6">
