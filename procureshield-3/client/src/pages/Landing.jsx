@@ -9,9 +9,9 @@ export default function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="h-screen overflow-hidden bg-slate-100 text-slate-900">
       <header className="border-b border-slate-700 bg-slate-800 text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-700 shadow-sm">
               <ShieldCheck size={21} />
@@ -32,8 +32,8 @@ export default function Landing() {
       </header>
 
       <main>
-        <section className="border-b border-slate-200 bg-gradient-to-b from-white to-slate-100">
-          <div className="mx-auto max-w-7xl px-6 pb-12 pt-14 lg:px-8 lg:pb-16 lg:pt-16">
+        <section className="bg-gradient-to-b from-white to-slate-100">
+          <div className="mx-auto max-w-7xl px-6 pb-6 pt-7 lg:px-8 lg:pb-7 lg:pt-8">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-800">
                 <span className="h-2 w-2 rounded-full bg-emerald-600" />
@@ -45,13 +45,13 @@ export default function Landing() {
                 <span className="block text-slate-700">with clarity and traceability.</span>
               </h1>
 
-              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
                 A unified workspace for bidder eligibility, tender compliance, document verification
                 and procurement risk review.
               </p>
 
-              <div className="mt-7 flex flex-wrap gap-3 text-sm">
-                <span className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
                   <FileCheck2 size={16} className="text-emerald-700" /> Document compliance
                 </span>
                 <span className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
@@ -65,14 +65,14 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-10 lg:px-8 lg:py-12">
-          <div className="mb-5">
+        <section className="mx-auto max-w-7xl px-6 py-6 lg:px-8 lg:py-7">
+          <div className="mb-3">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Choose your workspace</div>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">Procurement access</h2>
+            <h2 className="mt-1 text-xl font-bold text-slate-900">Procurement access</h2>
             <p className="mt-1 text-sm text-slate-600">Select the portal that matches your role.</p>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <PortalCard
               eyebrow="For bidders"
               title="Bidder Portal"
@@ -98,8 +98,8 @@ export default function Landing() {
         </section>
 
         <section className="border-y border-slate-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
-            <div className="grid gap-6 md:grid-cols-3">
+          <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
+            <div className="grid gap-4 md:grid-cols-3">
               <FeatureCard icon={ShieldCheck} title="Compliance" desc="Map tender requirements to bidder evidence and identify missing or invalid documents." />
               <FeatureCard icon={Share2} title="Network analysis" desc="Surface bidder relationships and procurement risk signals for officer review." />
               <FeatureCard icon={Users} title="Human review" desc="AI supports verification and analysis; procurement officers retain final decision authority." />
@@ -109,7 +109,7 @@ export default function Landing() {
       </main>
 
       <footer className="bg-slate-800 text-slate-300">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-6 text-xs sm:flex-row sm:items-center sm:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-3 text-xs sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <div>
             <div className="font-semibold text-white">ProcureShield AI</div>
             <div className="mt-1 text-slate-400">GeM procurement verification workspace</div>
@@ -129,7 +129,7 @@ function PortalCard({ eyebrow, title, description, icon: Icon, accent, action, o
   return (
     <button
       onClick={onClick}
-      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
     >
       <div className={"absolute left-0 top-0 h-1 w-full " + (blue ? "bg-blue-700" : "bg-emerald-700")} />
       <div className="flex items-start justify-between gap-5">
@@ -140,10 +140,10 @@ function PortalCard({ eyebrow, title, description, icon: Icon, accent, action, o
       </div>
 
       <div className={"mt-5 text-xs font-bold uppercase tracking-wider " + (blue ? "text-blue-700" : "text-emerald-700")}>{eyebrow}</div>
-      <h3 className="mt-1 text-2xl font-bold text-slate-900">{title}</h3>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+      <h3 className="mt-1 text-xl font-bold text-slate-900">{title}</h3>
+      <p className="mt-2 text-sm leading-5 text-slate-600">{description}</p>
 
-      <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
+      <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
         {points.map((point) => (
           <div key={point} className="flex items-center gap-2 text-sm text-slate-700">
             <ShieldCheck size={15} className={blue ? "text-blue-700" : "text-emerald-700"} />
