@@ -26,14 +26,30 @@ def extract_pdf(data: bytes, filename: str) -> Dict[str, Any]:
                 "message": f"Unable to read PDF: {exc}"}
     text = "\n\n".join(pages).strip()
     ocr_required = len(re.sub(r"\s+", "", text)) < 80
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    procurement_terms = (
+        "tender", "request for proposal", "rfp", "bid", "bidder", "procurement",
+        "government", "quotation", "eligibility", "gst", "pan", "udyam", "msme",
+        "emd", "experience", "turnover", "work order", "certificate", "contract",
+        "purchase order", "delivery", "technical specification"
+    )
+    relevant_hits = sum(1 for term in procurement_terms if term in normalized)
+    if not text:
+        extraction_status = "empty"
+        message = "Wrong document: the uploaded PDF contains no readable text."
+    elif relevant_hits == 0 and len(normalized) >= 40:
+        extraction_status = "wrong_document"
+        message = "Wrong document: this file does not appear to contain procurement or tender content."
+    else:
+        extraction_status = "success"
+        message = "Text extracted successfully." if not ocr_required else "Little or no text was extracted; OCR may be required."
     return {
         "filename": filename,
         "pages": len(pages),
         "text": text,
-        "extraction_status": "success" if text else "empty",
+        "extraction_status": extraction_status,
         "ocr_required": ocr_required,
-        "message": "Text extracted successfully." if text and not ocr_required
-                   else "Little or no text was extracted; OCR may be required.",
+        "message": message,
     }
 
 
@@ -180,13 +196,35 @@ def validate_document(filename: str, content_type: Optional[str], data: bytes) -
         if any(needle in lowered for needle in needles)
     ]
 
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    relevance_terms = (
+        "gst", "pan", "udyam", "msme", "certificate", "registration", "turnover",
+        "experience", "work order", "balance sheet", "financial statement", "iso",
+        "oem", "authorization", "bid", "tender", "procurement", "company",
+        "incorporation", "emd", "bid security", "contract", "purchase order"
+    )
+    relevant_hits = sum(1 for term in relevance_terms if term in normalized)
+    readable = all(c["passed"] for c in checks)
+    if not readable:
+        status = "wrong_document"
+        message = "Wrong document: the file is not a readable PDF."
+    elif len(re.sub(r"\s+", "", text)) < 40:
+        status = "wrong_document"
+        message = "Wrong document: too little readable content was found."
+    elif relevant_hits == 0:
+        status = "wrong_document"
+        message = "Wrong document: this file does not appear to be a procurement/business supporting document."
+    else:
+        status = "valid"
+        message = "Document is readable and appears relevant for procurement verification."
     return {
         "document": filename,
         "content_type": content_type,
         "pages": pages,
         "text": text,
         "detected_documents": detected_documents,
-        "status": "valid" if all(c["passed"] for c in checks) else "needs_review",
+        "status": status,
+        "message": message,
         "checks": checks,
     }
 
