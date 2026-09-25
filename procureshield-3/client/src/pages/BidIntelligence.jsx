@@ -233,8 +233,9 @@ export default function BidIntelligence() {
             <option key={t.tender_id} value={t.tender_id}>{t.tender_id} — {t.title}</option>
           ))}
         </select></div>
+      </section>
 
-        {selectedTender && (
+      {selectedTender && (
         <>
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-3">
