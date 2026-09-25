@@ -32,6 +32,22 @@ const aliases = {
   "Quality certificate": ["Quality certificate"],
 };
 
+function Status({ value }) {
+  const cls = value === "valid" || value === "matched"
+    ? "bg-emerald-50 text-emerald-700"
+    : value === "missing" || value === "wrong_document"
+      ? "bg-red-50 text-red-700"
+      : "bg-amber-50 text-amber-700";
+  const label = value === "valid" || value === "matched"
+    ? "✓ Matched"
+    : value === "missing"
+      ? "✕ Missing"
+      : value === "wrong_document"
+        ? "✕ Wrong document"
+        : "⚠ Needs review";
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
+}
+
 export default function BidIntelligence() {
   const navigate = useNavigate();
   const [tenders, setTenders] = useState([]);
