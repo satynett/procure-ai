@@ -226,7 +226,7 @@ function CompanyHistoryModal({ data, onClose, navigate }) {
     <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
       <div className="sticky top-0 z-10 flex items-start justify-between bg-slate-800 px-6 py-5 text-white">
         <div><div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Company Profile & Procurement History</div><h2 className="mt-1 text-xl font-bold">{bidder.company_name}</h2><div className="mt-1 text-xs text-slate-300">{bidder.bidder_id}</div></div>
-        <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-300 hover:bg-white/10"><X size={18}/></button>
+        <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-300 hover:bg-white/10"><span className="text-lg leading-none">×</span></button>
       </div>
       <div className="space-y-5 p-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
