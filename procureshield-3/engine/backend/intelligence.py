@@ -37,7 +37,7 @@ def extract_pdf(data: bytes, filename: str) -> Dict[str, Any]:
     if not text:
         extraction_status = "empty"
         message = "Wrong document: the uploaded PDF contains no readable text."
-    elif relevant_hits == 0 and len(normalized) >= 40:
+    elif relevant_hits == 0:
         extraction_status = "wrong_document"
         message = "Wrong document: this file does not appear to contain procurement or tender content."
     else:
