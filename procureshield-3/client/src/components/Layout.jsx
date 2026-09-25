@@ -127,7 +127,7 @@ export default function Layout({ children }) {
       </aside>
 
 
-      {/* Main column */
+      {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 md:px-6">
