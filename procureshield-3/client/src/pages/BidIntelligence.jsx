@@ -71,15 +71,32 @@ export default function BidIntelligence() {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiBusy, setAiBusy] = useState(false);
 
+  const loadOpenTenders = async ({ preserveSelection = true } = {}) => {
+    try {
+      const res = await api.tenders("Open");
+      const open = res.tenders || [];
+      setTenders(open);
+      setSelectedTenderId((current) => {
+        if (preserveSelection && current && open.some((t) => t.tender_id === current)) return current;
+        return open[0]?.tender_id || "";
+      });
+      setError("");
+    } catch (e) {
+      setError(e.message || "Unable to load tenders.");
+    } finally {
+      setLoadingTenders(false);
+    }
+  };
+
   useEffect(() => {
-    api.tenders("Open")
-      .then((res) => {
-        const open = res.tenders || [];
-        setTenders(open);
-        if (open.length) setSelectedTenderId(open[0].tender_id);
-      })
-      .catch((e) => setError(e.message || "Unable to load tenders."))
-      .finally(() => setLoadingTenders(false));
+    loadOpenTenders({ preserveSelection: false });
+    const refresh = () => loadOpenTenders();
+    window.addEventListener("focus", refresh);
+    const timer = window.setInterval(refresh, 15000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const selectedTender = useMemo(
@@ -224,7 +241,7 @@ export default function BidIntelligence() {
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       <section className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-l-4 border-emerald-600 bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-4"><div className="text-xs font-bold uppercase tracking-wider text-emerald-300">Government Procurement Portal</div><div className="mt-1 text-lg font-semibold text-white">Tender Document Compliance</div></div><div className="p-5"><label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select tender</label>
+        <div className="border-l-4 border-emerald-600 bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-4"><div className="text-xs font-bold uppercase tracking-wider text-emerald-300">Government Procurement Portal</div><div className="mt-1 text-lg font-semibold text-white">Tender Document Compliance</div></div><div className="p-5"><div className="flex items-center justify-between gap-3"><label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select published tender</label><button type="button" onClick={() => loadOpenTenders()} className="text-xs font-semibold text-brand-600 hover:underline">Refresh tenders</button></div>
         <select
           value={selectedTenderId}
           onChange={(e) => resetTender(e.target.value)}
