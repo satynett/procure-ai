@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ClipboardCheck, Users , Clock3, AlertTriangle, FileText, ArrowRight, Loader2, CheckCircle2, CircleDot } from "lucide-react";
+import { Plus, ClipboardCheck, Users, AlertTriangle, FileText, ArrowRight, Loader2, CheckCircle2, CircleDot } from "lucide-react";
 import { api } from "../api.js";
 
 export default function OfficerPortal() {
@@ -33,7 +33,7 @@ export default function OfficerPortal() {
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-        <div className="flex items-center justify-between"><div><h2 className="font-semibold">Officer work queue</h2><p className="mt-1 text-sm text-slate-500"></p></div></div>
+        <div className="flex items-center justify-between"><h2 className="font-semibold">Officer work queue</h2></div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <Queue title="Create / publish" text="Upload an RFP and publish a tender." icon={Plus} onClick={()=>navigate("/app/tenders/new")}/>
           <Queue title="Bid verification" text="Review submitted documents, compliance and evidence." icon={ClipboardCheck} onClick={()=>navigate("/app/bid-verification")}/>
