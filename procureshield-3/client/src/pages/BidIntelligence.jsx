@@ -83,13 +83,22 @@ export default function BidIntelligence() {
     try {
       const results = [];
       for (const file of files) {
-        const content_base64 = await encodeFile(file);
-        const result = await api.intelligenceValidateDocument({
-          filename: file.name,
-          content_type: file.type || "application/pdf",
-          content_base64
-        });
-        results.push({ ...result, filename: file.name });
+        try {
+          const content_base64 = await encodeFile(file);
+          const result = await api.intelligenceValidateDocument({
+            filename: file.name,
+            content_type: file.type || "application/pdf",
+            content_base64
+          });
+          results.push({ ...result, filename: file.name });
+        } catch (e) {
+          results.push({
+            filename: file.name,
+            status: "wrong_document",
+            detected_documents: [],
+            message: e.message || "Wrong document: this file could not be validated."
+          });
+        }
       }
       setChecks(results);
     } catch (e) {
