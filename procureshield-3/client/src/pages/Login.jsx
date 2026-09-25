@@ -1,80 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, FlaskConical, Loader2 } from "lucide-react";
+import { ShieldCheck, FlaskConical, Loader2, Mail, LockKeyhole, Building2, BriefcaseBusiness } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { api } from "../api.js";
 
-export default function Login() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { login } = useApp();
-  const navigate = useNavigate();
+const CONFIG={officer:{title:"Officer Login",subtitle:"Access tender management, bid verification and risk analysis.",icon:Building2,username:"admin",password:"admin123",label:"Officer demo",destination:"/app/officer"},bidder:{title:"Bidder Login",subtitle:"Access tenders, document verification and bid submission.",icon:BriefcaseBusiness,username:"bidder",password:"bidder123",label:"Bidder demo",destination:"/bidder"}};
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res = await api.login(username, password);
-      login(res.officer, res.token);
-      navigate("/app/officer");
-    } catch (err) {
-      setError(err.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600">
-            <ShieldCheck size={22} className="text-white" />
-          </div>
-          <h1 className="text-lg font-bold text-slate-900">ProcureShield AI</h1>
-          <p className="text-xs text-slate-500">Procurement Officer Sign In</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-            <FlaskConical size={14} /> Demo authentication only — not production security.
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Username</label>
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
-              />
-            </div>
-            {error && <p className="text-xs text-red-600">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              Sign In
-            </button>
-          </form>
-          <p className="mt-4 text-center text-[11px] text-slate-400">
-            Demo credentials: <span className="font-mono">admin</span> / <span className="font-mono">admin123</span>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+export default function Login({role="officer"}){
+ const c=CONFIG[role]||CONFIG.officer,RoleIcon=c.icon;
+ const [username,setUsername]=useState(c.username),[password,setPassword]=useState(c.password),[error,setError]=useState(""),[loading,setLoading]=useState(false);
+ const {login}=useApp();const navigate=useNavigate();
+ async function handleSubmit(e){e.preventDefault();setError("");setLoading(true);try{const res=await api.login(username,password);if(role==="officer"&&res.officer?.role!=="Procurement Officer")throw new Error("Please use an officer account for the Officer Portal.");if(role==="bidder"&&res.officer?.role!=="Bidder")throw new Error("Please use a bidder account for the Bidder Portal.");login(res.officer,res.token);navigate(c.destination);}catch(err){setError(err.message||"Login failed");}finally{setLoading(false);}}
+ return <div className="min-h-screen bg-slate-100 px-4 py-8 sm:py-12"><div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center justify-center"><div className="w-full">
+  <div className="mb-7 text-center"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-700 shadow-sm"><ShieldCheck size={28} className="text-white"/></div><h1 className="text-3xl font-bold tracking-tight text-slate-900">ProcureShield AI</h1><p className="mt-2 text-base text-slate-500">{c.title}</p></div>
+  <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-card sm:p-8">
+   <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><FlaskConical size={17} className="mt-0.5 shrink-0"/><div><div className="font-semibold">Sandbox environment</div><div className="mt-0.5 text-xs leading-5 text-amber-700">Demo authentication and synthetic procurement data are used for this prototype.</div></div></div>
+   <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><RoleIcon size={19}/></div><div><div className="text-sm font-semibold text-slate-900">{c.title}</div><div className="text-xs text-slate-500">{c.subtitle}</div></div></div>
+   <form onSubmit={handleSubmit} className="space-y-5">
+    <div><label className="mb-2 block text-sm font-semibold text-slate-700">Email / Username</label><div className="relative"><Mail size={18} className="absolute left-3.5 top-3.5 text-slate-400"/><input value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100" placeholder="Enter your username"/></div></div>
+    <div><label className="mb-2 block text-sm font-semibold text-slate-700">Password</label><div className="relative"><LockKeyhole size={18} className="absolute left-3.5 top-3.5 text-slate-400"/><input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100" placeholder="Enter your password"/></div></div>
+    {error&&<div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">{error}</div>}
+    <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-700 py-3.5 text-base font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">{loading&&<Loader2 size={18} className="animate-spin"/>}{loading?"Signing in...":"Sign In"}{!loading&&<span aria-hidden="true">→</span>}</button>
+   </form>
+   <div className="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">{c.label}: <span className="font-mono font-semibold text-slate-700">{c.username}</span> / <span className="font-mono font-semibold text-slate-700">{c.password}</span></div>
+   <button type="button" onClick={()=>navigate("/")} className="mt-5 w-full text-center text-sm font-medium text-brand-700 hover:text-brand-800">← Back to portal selection</button>
+  </div><p className="mt-5 text-center text-xs text-slate-400">ProcureShield AI · Prototype / sandbox</p>
+ </div></div></div>;
 }
