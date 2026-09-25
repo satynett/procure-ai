@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -16,11 +16,11 @@ import {
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { Building2 } from "lucide-react";
+import { api } from "../api.js";
 
 const NAV = [
   { to: "/app/officer", label: "Officer Command Center", icon: Building2 },
   { to: "/app/tenders/new", label: "Create Tender", icon: PlusSquare },
-  { to: "/app/bid-intelligence", label: "Bid Intelligence", icon: FileSearch },
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/bid-verification", label: "Bid Verification", icon: ShieldCheck },
   { to: "/app/bidder-network", label: "Bidder Network", icon: Share2 },
@@ -35,6 +35,15 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [alertCount, setAlertCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    api.alerts()
+      .then((res) => { if (active) setAlertCount(Array.isArray(res.alerts) ? res.alerts.length : 0); })
+      .catch(() => { if (active) setAlertCount(0); });
+    return () => { active = false; };
+  }, []);
 
   function handleSearch(e) {
     e.preventDefault();
