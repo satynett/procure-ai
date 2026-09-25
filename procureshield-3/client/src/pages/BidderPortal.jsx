@@ -23,6 +23,8 @@ export default function BidderPortal() {
   const [showSubmit, setShowSubmit] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [submissionSummary, setSubmissionSummary] = useState(null);
+  const [closedExpanded, setClosedExpanded] = useState(false);
+  const [closedQuery, setClosedQuery] = useState("");
   const [company, setCompany] = useState("");
   const [bidAmount, setBidAmount] = useState("");
   const [documents, setDocuments] = useState([]);
@@ -52,8 +54,8 @@ export default function BidderPortal() {
 
   const filteredClosed = useMemo(() => closedTenders.filter((t) => {
     const hay = `${t.title} ${t.tender_id} ${t.department} ${t.category}`.toLowerCase();
-    return (!q || hay.includes(q.toLowerCase())) && (!category || t.category === category);
-  }), [closedTenders, q, category]);
+    return !closedQuery || hay.includes(closedQuery.toLowerCase());
+  }), [closedTenders, closedQuery]);
 
   async function submitBid() {
     const amount = Number(bidAmount);
@@ -144,15 +146,60 @@ export default function BidderPortal() {
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-slate-300 bg-slate-50 shadow-sm">
-          <div className="border-b border-slate-200 bg-slate-200/70 px-5 py-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2.5 w-2.5 rounded-full bg-slate-500" />
-              <h2 className="text-xl font-bold text-slate-800">Closed / Awarded Tenders</h2>
-              <span className="rounded-full bg-slate-600 px-2.5 py-1 text-xs font-bold text-white">{closedTenders.length} Closed</span>
+          <button
+            type="button"
+            onClick={() => setClosedExpanded((value) => !value)}
+            className="w-full border-b border-slate-200 bg-slate-200/70 px-5 py-4 text-left transition hover:bg-slate-200"
+            aria-expanded={closedExpanded}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-slate-500" />
+                  <h2 className="text-xl font-bold text-slate-800">Closed / Awarded Tenders</h2>
+                  <span className="rounded-full bg-slate-600 px-2.5 py-1 text-xs font-bold text-white">{closedTenders.length} Closed</span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">Archived procurement records. Bidding is no longer available.</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-600">
+                <span>{closedExpanded ? "Hide archive" : "View archive"}</span>
+                <span className={"flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white transition-transform " + (closedExpanded ? "rotate-90" : "")}>
+                  <ArrowRight size={16} />
+                </span>
+              </div>
             </div>
-            <p className="mt-1 text-sm text-slate-600">Archived procurement records. Bidding is no longer available.</p>
-          </div>
-          <div className="grid gap-4 p-5 lg:grid-cols-2">{filteredClosed.map(t=><TenderCard key={t.tender_id} tender={t} onOpen={()=>{setSelected(t);setShowSubmit(false)}} />)}</div>
+          </button>
+
+          {closedExpanded && (
+            <div className="p-5">
+              <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 text-slate-400" size={17}/>
+                  <input
+                    value={closedQuery}
+                    onChange={(e) => setClosedQuery(e.target.value)}
+                    placeholder="Search closed tenders by ID, title, department or category"
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+                <span className="text-xs font-medium text-slate-500">Showing {filteredClosed.length} of {closedTenders.length}</span>
+              </div>
+
+              {filteredClosed.length ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {filteredClosed.map(t => (
+                    <TenderCard key={t.tender_id} tender={t} onOpen={() => {setSelected(t);setShowSubmit(false)}} />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                  <Search className="mx-auto text-slate-400" size={24}/>
+                  <p className="mt-2 text-sm font-semibold text-slate-700">No closed tenders found</p>
+                  <p className="mt-1 text-xs text-slate-500">Try a different tender ID, title, department or category.</p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
