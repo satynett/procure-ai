@@ -1,7 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileCheck2, ArrowRight, ShieldCheck, FileText, History, ExternalLink } from "lucide-react";
+import { Search, FileCheck2, ArrowRight, ShieldCheck, FileText, Upload, X, History, ExternalLink } from "lucide-react";
 import DocumentDropzone from "../components/DocumentDropzone.jsx";
+
+function encodeFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 import { api } from "../api.js";
 
 export default function BidderPortal() {
@@ -191,7 +200,7 @@ function TenderCard({ tender:t, onOpen, onBid }) {
   );
 }
 
-function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, error, onClose, onStartSubmit, onSubmit }) {
+function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, uploadErrors, setUploadErrors, error, onClose, onStartSubmit, onSubmit }) {
   const isAwarded = t.status === "Awarded";
 
   return (
@@ -254,16 +263,16 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
             <input
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              placeholder="Quoted amount (optional)"
+              placeholder="Quoted amount"
               type="number"
               className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => setDocuments(Array.from(e.target.files || []))}
-              className="mt-3 w-full text-sm"
+            <DocumentDropzone
+              files={documents}
+              errors={uploadErrors}
+              onChange={(next, rejected) => { setDocuments(next); setUploadErrors(rejected); }}
+              label="Bid documents"
+              hint="Drag and drop multiple PDF, DOC or DOCX files, or choose files."
             />
             <button
               onClick={onSubmit}
