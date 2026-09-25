@@ -17,35 +17,6 @@ import BidderPortal from "./pages/BidderPortal.jsx";
 import OfficerPortal from "./pages/OfficerPortal.jsx";
 import CreateTender from "./pages/CreateTender.jsx";
 import TenderManagement from "./pages/TenderManagement.jsx";
-
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useApp();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return <Layout>{children}</Layout>;
-}
-
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/bidder" element={<BidderPortal />} />
-      <Route path="/bidder/documents" element={<BidIntelligence />} />
-
-      <Route path="/app/bid-intelligence" element={<ProtectedRoute><BidIntelligence /></ProtectedRoute>} />
-      <Route path="/app/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/app/officer" element={<ProtectedRoute><OfficerPortal /></ProtectedRoute>} />
-      <Route path="/app/tenders/new" element={<ProtectedRoute><CreateTender /></ProtectedRoute>} />
-      <Route path="/app/tenders/:tenderId" element={<ProtectedRoute><TenderManagement /></ProtectedRoute>} />
-      <Route path="/app/bid-verification" element={<ProtectedRoute><BidVerification /></ProtectedRoute>} />
-      <Route path="/app/bid-verification/:bidId" element={<ProtectedRoute><BidDetail /></ProtectedRoute>} />
-      <Route path="/app/bidder-network" element={<ProtectedRoute><BidderNetwork /></ProtectedRoute>} />
-      <Route path="/app/risk-analysis" element={<ProtectedRoute><RiskAnalysis /></ProtectedRoute>} />
-      <Route path="/app/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
-      <Route path="/app/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-      <Route path="/app/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
+function ProtectedRoute({children}){const{isAuthenticated,officer}=useApp();if(!isAuthenticated)return <Navigate to="/login" replace/>;if(officer?.role!=="Procurement Officer")return <Navigate to="/bidder/login" replace/>;return <Layout>{children}</Layout>;}
+function BidderRoute({children}){const{isAuthenticated,officer}=useApp();if(!isAuthenticated)return <Navigate to="/bidder/login" replace/>;if(officer?.role!=="Bidder")return <Navigate to="/login" replace/>;return children;}
+export default function App(){return <Routes><Route path="/" element={<Landing/>}/><Route path="/login" element={<Login role="officer"/>}/><Route path="/bidder/login" element={<Login role="bidder"/>}/><Route path="/bidder" element={<BidderRoute><BidderPortal/></BidderRoute>}/><Route path="/bidder/documents" element={<BidderRoute><BidIntelligence/></BidderRoute>}/><Route path="/app/bid-intelligence" element={<ProtectedRoute><BidIntelligence/></ProtectedRoute>}/><Route path="/app/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/><Route path="/app/officer" element={<ProtectedRoute><OfficerPortal/></ProtectedRoute>}/><Route path="/app/tenders/new" element={<ProtectedRoute><CreateTender/></ProtectedRoute>}/><Route path="/app/tenders/:tenderId" element={<ProtectedRoute><TenderManagement/></ProtectedRoute>}/><Route path="/app/bid-verification" element={<ProtectedRoute><BidVerification/></ProtectedRoute>}/><Route path="/app/bid-verification/:bidId" element={<ProtectedRoute><BidDetail/></ProtectedRoute>}/><Route path="/app/bidder-network" element={<ProtectedRoute><BidderNetwork/></ProtectedRoute>}/><Route path="/app/risk-analysis" element={<ProtectedRoute><RiskAnalysis/></ProtectedRoute>}/><Route path="/app/alerts" element={<ProtectedRoute><Alerts/></ProtectedRoute>}/><Route path="/app/reports" element={<ProtectedRoute><Reports/></ProtectedRoute>}/><Route path="/app/settings" element={<ProtectedRoute><Settings/></ProtectedRoute>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>;}
