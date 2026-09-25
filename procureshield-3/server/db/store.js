@@ -47,6 +47,36 @@ export async function initDatabase({ seed=true }={}) {
     await refreshCache(collection);
   }
 
+  // Keep the existing database aligned with the synthetic multi-cluster
+  // network used by the demo. This only changes fictional relationship fields.
+  const networkDemoLinks = [
+    ["BID-2002", { director_name: "Amit Verma" }],
+    ["BID-2003", { address: "12, Industrial Area, New Delhi, Delhi" }],
+    ["BID-2004", { address: "12, Industrial Area, New Delhi, Delhi" }],
+    ["BID-2006", { director_name: "Vivek Rao" }],
+    ["BID-2007", { address: "16, Industrial Area, Pune, Maharashtra" }],
+    ["BID-2009", { director_name: "Ananya Menon" }],
+    ["BID-2010", { address: "19, Industrial Area, Jaipur, Rajasthan" }],
+    ["BID-2012", { director_name: "Aditya Tiwari" }],
+    ["BID-2013", { address: "22, Industrial Area, Ahmedabad, Gujarat" }],
+  ];
+  const bidderRows = getCollection("bidders");
+  let bidderLinksChanged = false;
+  for (const [bidderId, patch] of networkDemoLinks) {
+    const row = bidderRows.find((item) => item.bidder_id === bidderId);
+    if (!row) continue;
+    for (const [field, value] of Object.entries(patch)) {
+      if (row[field] !== value) {
+        row[field] = value;
+        bidderLinksChanged = true;
+      }
+    }
+  }
+  if (bidderLinksChanged) {
+    await replaceCollection("bidders", bidderRows);
+    console.log("PostgreSQL: applied synthetic multi-cluster relationship links.");
+  }
+
   // Existing demo rows were originally stored as plain-text base64.
   // Convert only those rows to real PDF bytes; never touch an already uploaded PDF.
   const tenderRows = getCollection("tenders");
