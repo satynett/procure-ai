@@ -151,11 +151,11 @@ def extract_requirements(text: str) -> Dict[str, Any]:
     # so the prototype stays explainable and does not invent requirements.
     technical_requirements: List[Dict[str, Any]] = []
     clause_patterns = [
-        (r"(?:delivery|completion)[^.\\n]{0,100}(?:within|in)\\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
-        (r"(?:bid validity|validity of bid)[^.\\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
-        (r"(?:emd|earnest money deposit)[^.\\n]{0,80}?(?:rs\\.?|₹|I|■)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
-        (r"(?:iso)[^.\\n]{0,60}(9001|14001|45001)", "certification"),
-        (r"(?:oem|original equipment manufacturer)[^.\\n]{0,80}(?:authorization|certificate)", "oem"),
+        (r"(?:delivery|completion)[^.\n]{0,100}(?:within|in)\s+(\\d+)\\s*(days?|weeks?|months?)", "delivery"),
+        (r"(?:bid validity|validity of bid)[^.\n]{0,80}(\\d+)\\s*(days?|months?)", "bid_validity"),
+        (r"(?:emd|earnest money deposit)[^.\n]{0,80}?(?:rs\\.?|₹|I|■)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(lakh|crore)?", "emd"),
+        (r"(?:iso)[^.\n]{0,60}(9001|14001|45001)", "certification"),
+        (r"(?:oem|original equipment manufacturer)[^.\n]{0,80}(?:authorization|certificate)", "oem"),
     ]
     for pattern, kind in clause_patterns:
         match = re.search(pattern, source, flags=re.I)
