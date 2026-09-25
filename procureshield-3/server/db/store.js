@@ -125,11 +125,12 @@ export async function replaceCollection(collection, rows) {
     // records that are not present in this snapshot remain untouched.
     for (const row of rows) {
       if (!row?.[key]) continue;
-      await client.query(
-        "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb) " +
-        "ON CONFLICT (" + key + ") DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()",
-        [row[key], JSON.stringify(row)]
-      );
+      const upsertSql = collection === "auditLog"
+        ? "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb) " +
+          "ON CONFLICT (" + key + ") DO UPDATE SET data = EXCLUDED.data"
+        : "INSERT INTO " + table + " (" + key + ", data) VALUES ($1, $2::jsonb) " +
+          "ON CONFLICT (" + key + ") DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()";
+      await client.query(upsertSql, [row[key], JSON.stringify(row)]);
     }
 
     await client.query("COMMIT");
