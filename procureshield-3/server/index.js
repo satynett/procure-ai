@@ -149,6 +149,10 @@ function decorateBid(bid, bidders, view) {
     risk_score: risk.score,
     risk_category: risk.category,
     cluster_id: risk.cluster_id || null,
+    uploaded_file_count: Array.isArray(bid.submitted_document_files) ? bid.submitted_document_files.length : 0,
+    has_uploaded_pdf: Array.isArray(bid.submitted_document_files) && bid.submitted_document_files.some((f) => String(f?.content_type || "").toLowerCase() === "application/pdf"),
+    first_pdf_name: Array.isArray(bid.submitted_document_files) ? bid.submitted_document_files.find((f) => String(f?.content_type || "").toLowerCase() === "application/pdf")?.name || null : null,
+    first_pdf_index: Array.isArray(bid.submitted_document_files) ? bid.submitted_document_files.findIndex((f) => String(f?.content_type || "").toLowerCase() === "application/pdf") : -1,
   };
 }
 
@@ -650,6 +654,19 @@ app.get("/api/bids/export.csv", asyncRoute(async (req, res) => {
   res.set("Content-Type", "text/csv");
   res.set("Content-Disposition", `attachment; filename="procureshield-bids-${Date.now()}.csv"`);
   res.send(toCsv(rows));
+}));
+
+app.get("/api/bids/:id/files/:index", asyncRoute(async (req, res) => {
+  const bidId = decodeURIComponent(req.params.id);
+  const index = Number(req.params.index);
+  const bid = getBids().find((b) => b.bid_id === bidId);
+  const files = Array.isArray(bid?.submitted_document_files) ? bid.submitted_document_files : [];
+  const file = Number.isInteger(index) ? files[index] : null;
+  if (!file?.content_base64) return res.status(404).json({ message: "Original uploaded file is not available." });
+  const buffer = Buffer.from(file.content_base64, "base64");
+  res.set("Content-Type", file.content_type || "application/octet-stream");
+  res.set("Content-Disposition", `attachment; filename="${String(file.name || "bid-file").replace(/"/g, "")}"`);
+  res.send(buffer);
 }));
 
 app.get("/api/bids/:id", asyncRoute(async (req, res) => {
