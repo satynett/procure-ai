@@ -12,7 +12,7 @@ import {
   ChevronDown,
   LogOut,
   FlaskConical,
-  FileSearch, PlusSquare,
+  PlusSquare,
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { Building2 } from "lucide-react";
