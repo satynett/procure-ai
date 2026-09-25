@@ -132,4 +132,83 @@ export async function replaceCollection(collection, rows) {
   }
 }
 
+
+export async function createBidSubmission({ companyName, bidData }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Serialize bidder creation so two rapid submissions cannot generate the
+    // same BID-* primary key from the same cached dataset.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('procureshield-bidder-create'))");
+
+    const existing = await client.query(
+      "SELECT data FROM procure_bidders WHERE lower(trim(data->>'company_name')) = lower(trim($1)) LIMIT 1 FOR UPDATE",
+      [companyName]
+    );
+
+    let bidder;
+    if (existing.rowCount) {
+      bidder = existing.rows[0].data;
+    } else {
+      const ids = await client.query(
+        "SELECT COALESCE(MAX(NULLIF(regexp_replace(bidder_id, '\\D', '', 'g'), '')::bigint), 1000) AS max_id FROM procure_bidders"
+      );
+      const nextNumber = Number(ids.rows[0].max_id || 1000) + 1;
+      bidder = {
+        bidder_id: `BID-${nextNumber}`,
+        company_name: companyName,
+        director_name: null,
+        address: null,
+        phone: null,
+        email: null,
+        gst_number: null,
+        pan_number: null,
+        bank_account: "",
+        msme_status: "Not provided",
+        bids: [],
+        label: null,
+      };
+      await client.query(
+        "INSERT INTO procure_bidders (bidder_id, data) VALUES ($1, $2::jsonb)",
+        [bidder.bidder_id, JSON.stringify(bidder)]
+      );
+    }
+
+    const bidIdResult = await client.query(
+      "SELECT COALESCE(MAX(NULLIF(regexp_replace(bid_id, '\\D', '', 'g'), '')::bigint), 0) AS max_id FROM procure_bids WHERE bid_id LIKE 'DEMO/BID/%'"
+    );
+    const sequence = Number(bidIdResult.rows[0].max_id || 0) + 1;
+    const bid = {
+      ...bidData,
+      bid_id: `DEMO/BID/2026/${String(sequence).padStart(4, "0")}`,
+      bidder_id: bidder.bidder_id,
+      bidder_company_name: bidder.company_name,
+    };
+
+    const updatedBidder = {
+      ...bidder,
+      bids: [...(Array.isArray(bidder.bids) ? bidder.bids : []), { bid_id: bid.bid_id, category: bid.category }],
+    };
+
+    await client.query(
+      "UPDATE procure_bidders SET data = $1::jsonb, updated_at = NOW() WHERE bidder_id = $2",
+      [JSON.stringify(updatedBidder), bidder.bidder_id]
+    );
+    await client.query(
+      "INSERT INTO procure_bids (bid_id, data) VALUES ($1, $2::jsonb)",
+      [bid.bid_id, JSON.stringify(bid)]
+    );
+
+    await client.query("COMMIT");
+    await refreshCache("bidders");
+    await refreshCache("bids");
+    return { bidder: updatedBidder, bid };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export async function closeDatabase() { await pool.end(); }
