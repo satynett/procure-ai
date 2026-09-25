@@ -83,4 +83,6 @@ export const api = {
   intelligenceRequirements: (text) => request("/intelligence/requirements", { method: "POST", body: JSON.stringify({ text }) }),
   intelligenceValidateDocument: (payload) => request("/intelligence/validate-document", { method: "POST", body: JSON.stringify(payload) }),
   intelligenceEligibility: (payload) => request("/intelligence/eligibility", { method: "POST", body: JSON.stringify(payload) }),
+  intelligenceAIRequirements: (text) => request("/intelligence/ai-requirements", { method: "POST", body: JSON.stringify({ text }) }),
+  intelligenceAIDocumentCheck: (payload) => request("/intelligence/ai-document-check", { method: "POST", body: JSON.stringify(payload) }),
 };
