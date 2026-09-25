@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UploadCloud, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";\nimport DocumentDropzone from "../components/DocumentDropzone.jsx";
 import { api } from "../api.js";
 
 function encodeFile(file) {
@@ -15,7 +15,7 @@ function encodeFile(file) {
 export default function CreateTender() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ title:"", department:"", category:"IT Hardware", deadline:"", estimated_value:"" });
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);\n  const [uploadErrors, setUploadErrors] = useState([]);
   const [parsed, setParsed] = useState(null);
   const [busy, setBusy] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -23,28 +23,48 @@ export default function CreateTender() {
   const [error, setError] = useState("");
 
   async function analyzeRfp() {
-    if (!file) return setError("Upload the RFP PDF first.");
+    if (!files.length) return setError("Upload at least one RFP document first.");
     setAnalyzing(true); setError(""); setMessage("");
     try {
-      const content_base64 = await encodeFile(file);
-      const result = await api.intelligencePdf({ filename:file.name, content_type:"application/pdf", content_base64 });
-      setParsed({ ...result.requirements, rfp_text: result.text, extraction_status: result.extraction_status });
-      setMessage("RFP analyzed. Review the extracted checklist before saving or publishing.");
+      const analyzed = [];
+      for (const file of files) {
+        const content_base64 = await encodeFile(file);
+        const result = await api.intelligencePdf({ filename:file.name, content_type:file.type || "application/pdf", content_base64 });
+        if (result.extraction_status === "wrong_document") {
+          throw new Error(result.message || `Wrong document: ${file.name} does not appear to be a valid procurement RFP.`);
+        }
+        analyzed.push({ ...result.requirements, rfp_text: result.text, extraction_status: result.extraction_status, filename: file.name });
+      }
+      const combined = analyzed.reduce((acc, item) => ({
+        ...acc,
+        eligibility_requirements: [...(acc.eligibility_requirements || []), ...(item.eligibility_requirements || [])],
+        required_documents: [...new Set([...(acc.required_documents || []), ...(item.required_documents || [])])],
+        technical_requirements: [...(acc.technical_requirements || []), ...(item.technical_requirements || [])],
+        important_dates: [...new Set([...(acc.important_dates || []), ...(item.important_dates || [])])],
+        rfp_text: [acc.rfp_text, item.rfp_text].filter(Boolean).join("\n\n"),
+      }), { eligibility_requirements: [], required_documents: [], technical_requirements: [], important_dates: [], rfp_text: "" });
+      setParsed(combined);
+      setMessage(`${files.length} RFP document${files.length !== 1 ? "s" : ""} analyzed. Review the extracted checklist before saving or publishing.`);
     } catch(e) { setError(e.message || "RFP analysis failed."); }
     finally { setAnalyzing(false); }
   }
 
   async function save(publish) {
-    if (!file) return setError("Upload the RFP PDF first.");
+    if (!files.length) return setError("Upload at least one RFP document first.");
     setBusy(true); setError(""); setMessage("");
     try {
-      const content_base64 = await encodeFile(file);
+      const rfp_documents = await Promise.all(files.map(async (file) => ({
+        filename: file.name,
+        content_type: file.type || "application/pdf",
+        content_base64: await encodeFile(file),
+      })));
       const result = await api.createTender({
         ...form,
         estimated_value: Number(form.estimated_value || 0),
         publish,
-        rfp_filename: file.name,
-        rfp_content_base64: content_base64,
+        rfp_filename: files[0].name,
+        rfp_content_base64: rfp_documents[0].content_base64,
+        rfp_documents,
       });
       setParsed(result.tender);
       setMessage(publish ? "Tender published. It is now visible in the bidder portal." : "Draft saved. You can publish it from Tender Management.");
@@ -84,12 +104,15 @@ export default function CreateTender() {
           <div className="rounded-lg bg-brand-50 p-2 text-brand-600"><UploadCloud size={20}/></div>
           <div><h2 className="font-semibold">Upload RFP</h2><p className="text-sm text-slate-500">The RFP belongs to the officer. The bidder only sees the published RFP.</p></div>
         </div>
-        <div className="mt-5 rounded-xl border-2 border-dashed border-slate-200 p-8 text-center">
-          <FileText className="mx-auto text-slate-400" size={30}/>
-          <input className="mx-auto mt-4 block text-sm" type="file" accept=".pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setParsed(null);}} />
-          {file && <div className="mt-3 text-sm font-medium text-slate-700">{file.name}</div>}
-          <p className="mt-2 text-xs text-slate-400">PDF only. Analyze it first so you can inspect the extracted checklist before publishing.</p>
-          <button disabled={!file || analyzing} onClick={analyzeRfp} className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50">{analyzing ? "Analyzing RFP…" : "Analyze RFP"}</button>
+        <div className="mt-5">
+          <DocumentDropzone
+            files={files}
+            errors={uploadErrors}
+            onChange={(next, rejected) => { setFiles(next); setUploadErrors(rejected); setParsed(null); }}
+            label="Upload RFP documents"
+            hint="Drag and drop multiple PDF, DOC or DOCX tender documents. Wrong file types are rejected immediately."
+          />
+          <button disabled={!files.length || analyzing} onClick={analyzeRfp} className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50">{analyzing ? "Analyzing RFPs…" : "Analyze RFPs"}</button>
         </div>
       </section>
 
@@ -105,8 +128,8 @@ export default function CreateTender() {
       )}
 
       <div className="flex flex-wrap justify-end gap-3">
-        <button disabled={busy || !file} onClick={()=>save(false)} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">Save Draft</button>
-        <button disabled={busy || !file || !form.title || !form.department || !form.deadline} onClick={()=>save(true)} className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy && <Loader2 size={15} className="animate-spin"/>} Publish Tender</button>
+        <button disabled={busy || !files.length} onClick={()=>save(false)} className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">Save Draft</button>
+        <button disabled={busy || !files.length || !form.title || !form.department || !form.deadline} onClick={()=>save(true)} className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy && <Loader2 size={15} className="animate-spin"/>} Publish Tender</button>
       </div>
     </div>
   );
