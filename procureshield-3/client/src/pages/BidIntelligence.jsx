@@ -173,9 +173,7 @@ export default function BidIntelligence() {
       const documentText = readable
         .map((doc) => `--- ${doc.filename} ---
 ${doc.text || doc.detected_documents?.join(", ") || ""}`)
-        .join("
-
-")
+        .join("\n\n")
         .slice(0, 30000);
 
       if (documentText) {
@@ -205,7 +203,7 @@ ${doc.text || doc.detected_documents?.join(", ") || ""}`)
     } catch (e) {
       setAiAnalysis({
         fallbackMissing: missingRequirements,
-        fallbackMatched: (selectedTender.required_documents || []).length - missingRequirements.length,
+        fallbackMatched: requiredDocuments.length - missingRequirements.length,
         readableCount: readable.length,
         wrongCount: results.filter((d) => d.status === "wrong_document").length,
         message: "AI analysis could not be completed. The checklist result above remains available."
