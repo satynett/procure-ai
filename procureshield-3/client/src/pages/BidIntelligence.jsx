@@ -40,7 +40,8 @@ export default function BidIntelligence() {
   const [checks, setChecks] = useState([]);
   const [busy, setBusy] = useState(false);
   const [loadingTenders, setLoadingTenders] = useState(true);
-  const [error, setError] = useState("");\n  const [uploadErrors, setUploadErrors] = useState([]);
+  const [error, setError] = useState("");
+  const [uploadErrors, setUploadErrors] = useState([]);
 
   useEffect(() => {
     api.tenders("Open")
@@ -90,7 +91,8 @@ export default function BidIntelligence() {
   });
   const matched = checklist.filter((x) => x.matched).length;
   const missing = checklist.length - matched;
-  const valid = checks.filter((c) => c.status === "valid").length;\n  const wrong = checks.filter((c) => c.status === "wrong_document").length;
+  const valid = checks.filter((c) => c.status === "valid").length;
+  const wrong = checks.filter((c) => c.status === "wrong_document").length;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
