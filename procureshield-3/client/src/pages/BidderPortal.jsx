@@ -50,7 +50,7 @@ export default function BidderPortal() {
       const result = await api.submitBid({
         tender_id: selected.tender_id,
         company_name: company,
-        bid_amount: bidAmount || null,
+        bid_amount: amount,
         documents: documents.map((f) => f.name),
       });
       await load();
@@ -120,6 +120,55 @@ export default function BidderPortal() {
       {selected && <TenderModal tender={selected} submitting={showSubmit} company={company} setCompany={setCompany} bidAmount={bidAmount} setBidAmount={setBidAmount} documents={documents} setDocuments={setDocuments} onClose={()=>{setSelected(null);setShowSubmit(false)}} onStartSubmit={()=>setShowSubmit(true)} onSubmit={submitBid}/>}
       {showHistory && <BidHistoryModal bids={myBids} onClose={()=>setShowHistory(false)}/>}
       <footer className="border-t border-slate-200 bg-white px-6 py-5 text-center text-xs text-slate-500">Prototype / sandbox data. The officer and bidder portals read the same tender and bid data.</footer>
+    </div>
+  );
+}
+
+function DocumentDropzone({ files, onChange }) {
+  function addFiles(fileList) {
+    const incoming = Array.from(fileList || []).filter((file) =>
+      /^(application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/.test(file.type) ||
+      /\.(pdf|doc|docx)$/i.test(file.name)
+    );
+    const merged = [...files, ...incoming].filter((file, index, all) =>
+      all.findIndex((candidate) => candidate.name === file.name && candidate.size === file.size) === index
+    );
+    onChange(merged);
+  }
+
+  return (
+    <div
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files); }}
+      className="mt-3 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
+    >
+      <div className="text-sm font-semibold text-slate-700">Bid documents</div>
+      <div className="mt-1 text-xs text-slate-500">Drag and drop PDFs or Word documents, or choose files.</div>
+      <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-brand-300">
+        <Upload size={14} /> Choose files
+        <input
+          type="file"
+          multiple
+          accept=".pdf,.doc,.docx"
+          onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+          className="sr-only"
+        />
+      </label>
+      {files.length > 0 && (
+        <div className="mt-3 space-y-1 text-left">
+          {files.map((file, index) => (
+            <div key={file.name + file.size + index} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-xs">
+              <span className="min-w-0 truncate font-medium text-slate-700">{file.name}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-emerald-600">Ready</span>
+                <button type="button" onClick={() => onChange(files.filter((_, i) => i !== index))} className="text-slate-400 hover:text-red-500" aria-label={`Remove ${file.name}`}>
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
