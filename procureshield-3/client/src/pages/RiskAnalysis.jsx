@@ -197,7 +197,6 @@ export default function RiskAnalysis() {
           </table>
         </div>
       </section>
-    </div>
 
       {companyLoading && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40"><div className="rounded-xl bg-white p-6 shadow-xl"><Loader2 className="mx-auto animate-spin text-brand-600"/><div className="mt-2 text-sm text-slate-600">Loading company history…</div></div></div>}
       {companyDetail && <CompanyHistoryModal data={companyDetail} onClose={() => setCompanyDetail(null)} navigate={navigate}/>}
