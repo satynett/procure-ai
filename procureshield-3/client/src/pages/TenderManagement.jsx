@@ -5,6 +5,7 @@ import {
   Award, Ban, Trash2, ExternalLink, CheckCircle2, XCircle, AlertTriangle, Loader2
 } from "lucide-react";
 import { api } from "../api.js";
+import { formatDateTime } from "../constants.js";
 
 const money = (n) => n == null || Number.isNaN(Number(n)) ? "—" : "₹" + Number(n).toLocaleString("en-IN");
 const statusClass = (s) => s === "Verified" ? "bg-emerald-50 text-emerald-700" : s === "Rejected" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
@@ -144,8 +145,8 @@ function Overview({t,data,bids,onBidders}) {
    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card lg:col-span-2">
      <h2 className="font-semibold">Tender overview</h2>
      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-       <Info label="Tender ID" value={t.tender_id}/><Info label="Published" value={t.published_at ? new Date(t.published_at).toLocaleString() : "—"}/>
-       <Info label="Deadline" value={t.deadline || t.closing_date || "—"}/><Info label="Government estimated value" value={money(t.estimated_value)}/>
+       <Info label="Tender ID" value={t.tender_id}/><Info label="Published" value={formatDateTime(t.published_at)}/>
+       <Info label="Deadline" value={formatDateTime(t.deadline || t.closing_date)}/><Info label="Government estimated value" value={money(t.estimated_value)}/>
        <Info label="Award amount" value={money(t.award_amount)}/><Info label="Winner" value={t.winner_name || "Not awarded"}/>
      </div>
      <div className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">{t.eligibility_summary || "Officer checklist review required."}</div>
@@ -192,7 +193,7 @@ function ComplianceTab({bids}) {
  return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card"><h2 className="font-semibold">Final compliance comparison</h2><p className="mt-1 text-sm text-slate-500">Requirement-by-requirement comparison generated for each submitted bid.</p><div className="mt-4 space-y-3">{bids.length?bids.map(b=><div key={b.bid_id} className="rounded-lg border border-slate-100 p-4"><div className="flex justify-between gap-3"><div className="font-semibold">{b.bidder_name}</div><div className="text-sm font-bold">{b.finalComparison?.score ?? "—"}%</div></div><div className="mt-2 text-xs text-slate-500">{b.verification_status} · Bid {money(b.quoted_amount)}</div></div>):<Empty/>}</div></section>;
 }
 function RiskTab({bids,onOpenBid}){return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card"><h2 className="font-semibold">Risk review</h2><p className="mt-1 text-sm text-slate-500">Relationship risk is a review signal, not a finding of wrongdoing.</p><div className="mt-4 space-y-2">{bids.length?bids.map(b=><button key={b.bid_id} onClick={()=>onOpenBid(b.bid_id)} className="flex w-full items-center justify-between rounded-lg border border-slate-100 p-3 text-left hover:bg-slate-50"><span><b>{b.bidder_name}</b><span className="ml-2 text-xs text-slate-500">{b.bid_id}</span></span><span className="text-sm font-semibold">{b.risk_score}/100 · {b.risk_category}</span></button>):<Empty/>}</div></section>}
-function AuditTab({tenderId}){const [log,setLog]=useState([]);useEffect(()=>{api.auditLog().then(x=>setLog((x.log||[]).filter(e=>e.tender_id===tenderId)));},[tenderId]);return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card"><h2 className="font-semibold">Tender audit timeline</h2><div className="mt-4 space-y-3">{log.length?log.map(x=><div key={x.id} className="border-l-2 border-brand-200 pl-4"><div className="text-sm font-semibold">{x.action}</div><div className="text-xs text-slate-500">{new Date(x.timestamp).toLocaleString()} · {x.officer}</div></div>):<Empty/>}</div></section>}
+function AuditTab({tenderId}){const [log,setLog]=useState([]);useEffect(()=>{api.auditLog().then(x=>setLog((x.log||[]).filter(e=>e.tender_id===tenderId)));},[tenderId]);return <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card"><h2 className="font-semibold">Tender audit timeline</h2><div className="mt-4 space-y-3">{log.length?log.map(x=><div key={x.id} className="border-l-2 border-brand-200 pl-4"><div className="text-sm font-semibold">{x.action}</div><div className="text-xs text-slate-500">{formatDateTime(x.timestamp)} · {x.officer}</div></div>):<Empty/>}</div></section>}
 function Info({label,value}){return <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">{label}</div><div className="mt-1 text-sm font-semibold text-slate-700">{value}</div></div>}
 function Row({label,value}){return <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">{label}</span><b>{value}</b></div>}
 function Empty(){return <div className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-400">No data available for this tender.</div>}
