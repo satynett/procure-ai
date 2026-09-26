@@ -41,6 +41,7 @@ import {
 } from "./utils/engineMapping.js";
 import { registryEvidenceFor } from "./utils/registrySignals.js";
 import { buildChecklist, buildTenderComparison } from "./utils/checklist.js";
+import { buildClusters } from "./utils/engineMapping.js";
 import { toCsv } from "./utils/csv.js";
 import { requireAuth, DEMO_TOKEN } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
