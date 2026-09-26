@@ -68,6 +68,7 @@ class ScoreWeights:
     shared_address: float = 0.85
     cobid_frequency: float = 0.95
     bid_price_similarity: float = 1.00
+    duplicate_bid_documents: float = 1.20
     complementary_bidding: float = 0.90
     winner_rotation: float = 1.00
     market_concentration: float = 0.60
