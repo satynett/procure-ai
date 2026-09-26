@@ -35,6 +35,7 @@ class ProcurementGraph:
     company_persons: Dict[str, Set[str]] = field(default_factory=dict)
     company_addresses: Dict[str, Set[str]] = field(default_factory=dict)
     bids: Dict[Tuple[str, str], Dict[str, object]] = field(default_factory=dict)
+    company_tender_documents: Dict[Tuple[str, str], Set[str]] = field(default_factory=dict)
     labels: Dict[str, int] = field(default_factory=dict)
 
     # ------------------------------------------------------------- accessors
@@ -183,6 +184,7 @@ def build_graph(dataset: NormalizedDataset) -> ProcurementGraph:
     company_persons: Dict[str, Set[str]] = defaultdict(set)
     company_addresses: Dict[str, Set[str]] = defaultdict(set)
     bids: Dict[Tuple[str, str], Dict[str, object]] = {}
+    company_tender_documents: Dict[Tuple[str, str], Set[str]] = {}
     labels: Dict[str, int] = {}
 
     for record in dataset.records:
@@ -208,6 +210,10 @@ def build_graph(dataset: NormalizedDataset) -> ProcurementGraph:
         key = (company_id, tender_id)
         existing = bids.get(key)
         bid_amount = record.bid_amount
+        raw_document_hashes = record.model_extra.get("document_hashes", []) if hasattr(record, "model_extra") else []
+        document_hashes = {str(x).strip().lower() for x in raw_document_hashes if str(x).strip()}
+        if document_hashes:
+            company_tender_documents.setdefault(key, set()).update(document_hashes)
         if existing is None:
             bids[key] = {
                 "bid_amount": bid_amount,
@@ -295,6 +301,7 @@ def build_graph(dataset: NormalizedDataset) -> ProcurementGraph:
         company_persons={k: set(v) for k, v in company_persons.items()},
         company_addresses={k: set(v) for k, v in company_addresses.items()},
         bids=bids,
+        company_tender_documents={k: set(v) for k, v in company_tender_documents.items()},
         labels=labels,
     )
     LOGGER.info("graph built: %s", procurement_graph.stats())
