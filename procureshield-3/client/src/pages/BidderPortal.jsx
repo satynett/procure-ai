@@ -12,6 +12,7 @@ function encodeFile(file) {
   });
 }
 import { api } from "../api.js";
+import { formatDateTime } from "../constants.js";
 
 export default function BidderPortal() {
   const navigate = useNavigate();
@@ -268,7 +269,7 @@ function TenderCard({ tender:t, onOpen, onBid }) {
       <div className="mt-4 grid grid-cols-3 gap-3 border-y border-slate-100 py-3 text-xs">
         <div>
           <span className="text-slate-400">{dateLabel}</span>
-          <div className="mt-1 font-semibold">{t.deadline || t.closing_date}</div>
+          <div className="mt-1 font-semibold">{formatDateTime(t.deadline || t.closing_date)}</div>
         </div>
         <div>
           <span className="text-slate-400">Bids</span>
@@ -321,7 +322,7 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <Info label="Status" value={t.status}/>
-          <Info label={isAwarded ? "Closing date" : "Deadline"} value={t.deadline || t.closing_date}/>
+          <Info label={isAwarded ? "Closing date" : "Deadline"} value={formatDateTime(t.deadline || t.closing_date)}/>
           <Info label="Bids" value={String(t.bid_count || 0)}/>
           <Info label="RFP uploaded by" value="Procurement Officer"/>
         </div>
@@ -499,13 +500,13 @@ function BidHistoryModal({ bids, onClose }) {
             const statusClass = status === "Verified" ? "bg-emerald-50 text-emerald-700" : status === "Rejected" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
             return <div key={bid.bid_id} className="rounded-xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><div className="text-xs font-semibold text-brand-600">{bid.tender_id}</div><h3 className="mt-1 font-semibold">{bid.tender_title}</h3><div className="mt-1 text-xs text-slate-500">Bid ID: {bid.bid_id} · Submitted: {bid.submission_date || "—"}</div></div>
+                <div><div className="text-xs font-semibold text-brand-600">{bid.tender_id}</div><h3 className="mt-1 font-semibold">{bid.tender_title}</h3><div className="mt-1 text-xs text-slate-500">Bid ID: {bid.bid_id} · Submitted: {formatDateTime(bid.submission_date)}</div></div>
                 <span className={"rounded-full px-2.5 py-1 text-xs font-semibold " + statusClass}>{status}</span>
               </div>
               <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
                 <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Tender status</div><div className="mt-1 font-medium">{bid.tender_status || "—"}</div></div>
                 <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Bid amount</div><div className="mt-1 font-medium">{bid.bid_amount ? "₹" + Number(bid.bid_amount).toLocaleString("en-IN") : "Not provided"}</div></div>
-                <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Deadline</div><div className="mt-1 font-medium">{bid.tender_deadline || "—"}</div></div>
+                <div className="rounded-lg bg-slate-50 p-3"><div className="text-xs text-slate-400">Deadline</div><div className="mt-1 font-medium">{formatDateTime(bid.tender_deadline)}</div></div>
               </div>
               {bid.tender_status === "Awarded" && bid.winner_name && <div className="mt-3 text-xs text-slate-500">Recorded winner: {bid.winner_name}</div>}
             </div>;
