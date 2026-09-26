@@ -178,16 +178,25 @@ export async function analyze(bidders, bids, opts = {}) {
   if (analysisPromise) return analysisPromise;
 
   analysisPromise = (async () => {
-    const analysis = await engineFetch("/analyze", {
-      method: "POST",
-      body: JSON.stringify({
-        records,
-        train: opts.train ?? ENGINE_TRAIN,
-        use_model: opts.useModel ?? ENGINE_USE_MODEL,
-        max_entities: 500,
-        include_all_entities: true,
-      }),
-    });
+    let analysis;
+    try {
+      analysis = await engineFetch("/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+          records,
+          train: opts.train ?? ENGINE_TRAIN,
+          use_model: opts.useModel ?? ENGINE_USE_MODEL,
+          max_entities: 500,
+          include_all_entities: true,
+        }),
+      });
+    } catch (err) {
+      // Keep officer pages responsive if the free Render engine is waking up
+      // or temporarily unavailable. A previous analysis is safer than a blank
+      // page; the next successful analysis replaces it automatically.
+      if (err instanceof EngineUnavailableError && cache?.view) return cache.view;
+      throw err;
+    }
 
     const view = buildView(analysis, bidders);
     cache = { fingerprint: fp, analysis, view, at: new Date().toISOString(), records };
