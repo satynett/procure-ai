@@ -25,7 +25,9 @@ import { registryEdges } from "./registrySignals.js";
 const ENGINE_URL = (process.env.ENGINE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const ENGINE_TIMEOUT_MS = Number(process.env.ENGINE_TIMEOUT_MS || 60_000);
 const ENGINE_TRAIN = String(process.env.ENGINE_TRAIN || "false").toLowerCase() === "true";
-const ENGINE_USE_MODEL = String(process.env.ENGINE_USE_MODEL || "true").toLowerCase() === "true";
+// Render's lightweight Python service may not have PyTorch/PyG available.
+// Keep production analysis deterministic unless model support is explicitly enabled.
+const ENGINE_USE_MODEL = String(process.env.ENGINE_USE_MODEL || "false").toLowerCase() === "true";
 
 export class EngineUnavailableError extends Error {
   constructor(message) {
