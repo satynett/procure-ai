@@ -439,21 +439,35 @@ app.post("/api/officer/tenders", asyncRoute(async (req,res)=>{
     ? rfp_documents
     : [{filename:rfp_filename||"tender-rfp.pdf",content_type:"application/pdf",content_base64:rfp_content_base64}];
 
+  // Tender creation must not fail just because the optional analytics/document
+  // intelligence service is waking up or temporarily returning a gateway error.
+  // Store the official RFP first; analysis is an enrichment step and can be retried.
   const analyses=[];
   for(const doc of suppliedDocs){
-    const analysis=await intelligencePdf({
-      filename:doc.filename||"tender-rfp.pdf",
-      content_base64:doc.content_base64,
-      content_type:doc.content_type||"application/pdf"
-    });
-    if(analysis.extraction_status==="wrong_document" || analysis.extraction_status==="empty" || analysis.extraction_status==="error" || analysis.extraction_status==="unsupported_type"){
-      return res.status(400).json({
-        message:analysis.message || `Wrong document: ${doc.filename || "uploaded file"}`,
-        filename:doc.filename || null,
-        document_error:true
+    try {
+      const analysis=await intelligencePdf({
+        filename:doc.filename||"tender-rfp.pdf",
+        content_base64:doc.content_base64,
+        content_type:doc.content_type||"application/pdf"
+      });
+      if(analysis.extraction_status==="wrong_document" || analysis.extraction_status==="empty" || analysis.extraction_status==="error" || analysis.extraction_status==="unsupported_type"){
+        return res.status(400).json({
+          message:analysis.message || `Wrong document: ${doc.filename || "uploaded file"}`,
+          filename:doc.filename || null,
+          document_error:true
+        });
+      }
+      analyses.push(analysis);
+    } catch (err) {
+      if (!(err instanceof EngineUnavailableError)) throw err;
+      console.warn("RFP intelligence unavailable during tender creation:", err.message);
+      analyses.push({
+        text: "",
+        requirements: { eligibility_requirements: [], technical_requirements: [], required_documents: [], important_dates: [] },
+        extraction_status: "pending_engine",
+        message: "RFP stored successfully. Document intelligence will be available when the analytics service is back online."
       });
     }
-    analyses.push(analysis);
   }
 
   const combinedText=analyses.map(x=>x.text||"").filter(Boolean).join("\n\n");
