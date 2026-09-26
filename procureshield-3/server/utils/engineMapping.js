@@ -8,6 +8,8 @@
 // explanations come from the Python engine (see engineClient.js). This module
 // only reshapes data, so it is fully unit-testable with no network.
 
+import crypto from "crypto";
+
 // ---------------------------------------------------------------------
 // Engine signal codes -> UI evidence codes + labels
 // ---------------------------------------------------------------------
