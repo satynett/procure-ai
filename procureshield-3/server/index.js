@@ -1333,8 +1333,11 @@ export { app };
 
 if (process.env.NODE_ENV !== "test") {
   await initDatabase({ seed: DB_SEED });
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ProcureShield BFF (SANDBOX/DEMO DATA) on http://localhost:${PORT}`);
     console.log(`Analytics engine: ${engineUrl()}`);
   });
+  // Match Render's edge keep-alive window to avoid intermittent 502 resets.
+  server.keepAliveTimeout = 120_000;
+  server.headersTimeout = 120_000;
 }
