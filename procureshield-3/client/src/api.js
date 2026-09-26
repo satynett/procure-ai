@@ -1,4 +1,4 @@
-const BASE = "/api";
+const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "") + "/api";
 
 async function request(path, options = {}) {
   const token = sessionStorage.getItem("ps_token");
