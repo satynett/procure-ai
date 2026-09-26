@@ -38,32 +38,55 @@ export class EngineUnavailableError extends Error {
 }
 
 async function engineFetch(path, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ENGINE_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${ENGINE_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      ...options,
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const detail = body.detail || body.message || `HTTP ${res.status}`;
-      throw new EngineUnavailableError(`ProcureShield engine rejected ${path}: ${detail}`);
-    }
-    return body;
-  } catch (err) {
-    if (err instanceof EngineUnavailableError) throw err;
-    const reason = err.name === "AbortError" ? `timed out after ${ENGINE_TIMEOUT_MS}ms` : err.message;
-    throw new EngineUnavailableError(
-      `Cannot reach the ProcureShield engine at ${ENGINE_URL} (${reason}). ` +
-        `Start it with: cd engine && uvicorn backend.main:app --port 8000`
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-}
+  // Render free services can briefly return 502/503/504 while the Python
+  // service is waking up. Retry those transient gateway failures before
+  // surfacing an engine outage to the bidder/officer UI.
+  const retryDelays = [750, 1500];
+  let lastGatewayError = null;
 
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ENGINE_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${ENGINE_URL}${path}`, {
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        ...options,
+      });
+      const body = await res.json().catch(() => ({}));
+
+      if (res.ok) return body;
+
+      const detail = body.detail || body.message || `HTTP ${res.status}`;
+      if ([502, 503, 504].includes(res.status) && attempt < retryDelays.length) {
+        lastGatewayError = new EngineUnavailableError(
+          `ProcureShield engine rejected ${path}: ${detail}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+        continue;
+      }
+
+      throw new EngineUnavailableError(
+        `ProcureShield engine rejected ${path}: ${detail}`
+      );
+    } catch (err) {
+      if (err instanceof EngineUnavailableError) throw err;
+      const reason = err.name === "AbortError"
+        ? `timed out after ${ENGINE_TIMEOUT_MS}ms`
+        : err.message;
+      throw new EngineUnavailableError(
+        `Cannot reach the ProcureShield engine at ${ENGINE_URL} (${reason}). ` +
+          `Start it with: cd engine && uvicorn backend.main:app --port 8000`
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  throw lastGatewayError || new EngineUnavailableError(
+    `ProcureShield engine is temporarily unavailable at ${ENGINE_URL}.`
+  );
+}
 // ---------------------------------------------------------------------
 // Cache
 // ---------------------------------------------------------------------
