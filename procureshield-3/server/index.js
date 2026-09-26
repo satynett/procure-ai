@@ -519,6 +519,10 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
     return res.status(400).json({ message: "At least one bid document is required." });
   }
 
+  // Submission should be fast and must not depend on a sleeping analytics engine.
+  // The dedicated "Check My Documents" workflow performs the full AI/document
+  // validation before bidding. At submission time we only verify the binary
+  // signature, reject corrupt/garbage uploads, and store the bid as Needs Review.
   const validatedDocuments=[];
   for(const doc of documents){
     if(!doc || typeof doc !== "object"){
@@ -529,65 +533,25 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
     }
     const filename=String(doc.name || "bid-document").trim();
     const contentBase64=typeof doc.content_base64 === "string" ? doc.content_base64 : "";
-    const extension=/\.(pdf|doc|docx)$/i.test(filename);
-    if(!extension){
+    if(!/\.(pdf|doc|docx)$/i.test(filename)){
       return res.status(400).json({
         message:`Wrong document: ${filename} is not a supported document. Upload PDF, DOC or DOCX.`,
         filename,
         document_error:true
       });
     }
-    if(!contentBase64){
+    if(!contentBase64 || !hasValidDocumentSignature(filename, contentBase64)){
       return res.status(400).json({
-        message:`Wrong document: ${filename} is empty or could not be read.`,
+        message:`Wrong document: ${filename} is not a valid PDF, DOC or DOCX payload.`,
         filename,
         document_error:true
       });
     }
-    try {
-      const result=await intelligenceValidateDocument({
-        filename,
-        content_type:doc.content_type||"application/pdf",
-        content_base64:contentBase64
-      });
-      if(result.status==="wrong_document"){
-        return res.status(400).json({
-          message:result.message || `Wrong document: ${filename}`,
-          filename,
-          document_error:true
-        });
-      }
-      validatedDocuments.push({
-        name: filename,
-        content_type: doc.content_type || "application/pdf",
-        content_base64: contentBase64
-      });
-    } catch (err) {
-      if (err instanceof EngineUnavailableError) {
-        // A temporary Render engine outage must not prevent bid submission.
-        // We still reject obviously fake/corrupt payloads by checking the
-        // document's binary signature. The bid remains "Needs Review" so the
-        // officer can validate the document once the engine is back.
-        if (!hasValidDocumentSignature(filename, contentBase64)) {
-          return res.status(400).json({
-            message:`Wrong document: ${filename} is not a valid PDF, DOC or DOCX payload.`,
-            filename,
-            document_error:true
-          });
-        }
-        validatedDocuments.push({
-          name: filename,
-          content_type: doc.content_type || "application/pdf",
-          content_base64: contentBase64
-        });
-        continue;
-      }
-      return res.status(400).json({
-        message:`Wrong document: ${filename}. The file could not be validated.`,
-        filename,
-        document_error:true
-      });
-    }
+    validatedDocuments.push({
+      name: filename,
+      content_type: doc.content_type || "application/pdf",
+      content_base64: contentBase64
+    });
   }
 
   const cleanCompanyName = company_name.trim();
