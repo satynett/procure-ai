@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Filter, Loader2, ChevronRight, Download } from "lucide-react";
 import { api } from "../api.js";
+import { formatDateTime } from "../constants.js";
 import { RiskBadge, StatusBadge } from "../components/Badges.jsx";
 
 function downloadBlob(blob, filename) {
@@ -138,7 +139,7 @@ export default function BidVerification() {
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500">{b.tender_id}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-800">{b.bidder_name}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-500">{b.msme_status}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-500">{b.submission_date}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDateTime(b.submission_date)}</td>
                     <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={b.verification_status} /></td>
                     <td className="whitespace-nowrap px-4 py-3"><RiskBadge score={b.risk_score} category={b.risk_category} /></td>
                     <td className="whitespace-nowrap px-4 py-3">
