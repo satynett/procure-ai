@@ -15,6 +15,7 @@ export const WEIGHT_LABELS = {
   // Behavioural signals (engine) - these need multi-bidder tenders to fire
   repeatedCoBidding: { label: "Repeated Co-Bidding", weight: 0.9 },
   bidPriceSimilarity: { label: "Bid Price Similarity", weight: 0.8 },
+  duplicateBidDocuments: { label: "Identical Bid Documents", weight: 1.2 },
   coverBidPattern: { label: "Cover Bid Pattern", weight: 0.95 },
   winnerRotation: { label: "Winner Rotation", weight: 1.0 },
   marketConcentration: { label: "Market Concentration", weight: 0.7 },
