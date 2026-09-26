@@ -127,8 +127,7 @@ export default function BidIntelligence() {
     setAiAnalysis(null);
 
     try {
-      const results = [];
-      for (const file of files) {
+      const results = await Promise.all(files.map(async (file) => {
         try {
           const content_base64 = await encodeFile(file);
           const result = await api.intelligenceValidateDocument({
@@ -136,17 +135,17 @@ export default function BidIntelligence() {
             content_type: file.type || "application/pdf",
             content_base64
           });
-          results.push({ ...result, filename: file.name });
+          return { ...result, filename: file.name };
         } catch (e) {
-          results.push({
+          return {
             filename: file.name,
             status: "wrong_document",
             detected_documents: [],
             text: "",
             message: e.message || "Wrong document: this file could not be validated."
-          });
+          };
         }
-      }
+      }));
       setChecks(results);
       await runAIAnalysis(results);
     } catch (e) {
