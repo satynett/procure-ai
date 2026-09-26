@@ -169,7 +169,12 @@ app.post("/api/auth/login", rateLimit({ windowMs: 60_000, max: 10 }), (req, res)
     return res.json({ success: true, token: DEMO_TOKEN, officer: { name: "Procurement Officer 01", role: "Procurement Officer", org: "GeM Demo Cell" } });
   }
   if (username === bidderUser && password === bidderPass) {
-    return res.json({ success: true, token: DEMO_TOKEN, officer: { name: "Demo Bidder", role: "Bidder", org: "GeM Supplier Demo" } });
+    const demoBidderId = process.env.DEMO_BIDDER_ID || getBidders()[0]?.bidder_id || "BID-2001";
+    return res.json({
+      success: true,
+      token: DEMO_TOKEN,
+      officer: { name: "Demo Bidder", role: "Bidder", org: "GeM Supplier Demo", bidder_id: demoBidderId },
+    });
   }
   return res.status(401).json({ success: false, message: "Invalid demo credentials." });
 });
@@ -542,7 +547,12 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
 // Bidder bid history
 // ---------------------------------------------------------------------
 app.get("/api/bidder/bids", asyncRoute(async (req, res) => {
-  const bidderId = String(req.query.bidder_id || "BID-1001");
+  const bidderId = String(
+    req.query.bidder_id ||
+    process.env.DEMO_BIDDER_ID ||
+    getBidders()[0]?.bidder_id ||
+    "BID-2001"
+  );
   const bidders = getBidders();
   const view = await getAnalysis();
   const tenders = getTenders();
