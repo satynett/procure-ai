@@ -90,6 +90,16 @@ export function inferTenderWinners(bids) {
  * `tender_value` is unknown in this dataset, so price-pressure signals are
  * reported by the engine as non-evaluable instead of being fabricated.
  */
+function documentFingerprints(files) {
+  if (!Array.isArray(files)) return [];
+  return files.map((file) => {
+    const base64 = String(file?.content_base64 || "").replace(/^data:[^,]+,/, "");
+    if (!base64) return null;
+    try { return crypto.createHash("sha256").update(Buffer.from(base64, "base64")).digest("hex"); }
+    catch { return null; }
+  }).filter(Boolean);
+}
+
 export function buildEngineRecords(bidders, bids) {
   const byId = new Map(bidders.map((b) => [b.bidder_id, b]));
   const winners = inferTenderWinners(bids);
@@ -112,6 +122,8 @@ export function buildEngineRecords(bidders, bids) {
       }
       if (bidder.address) record.address = bidder.address;
       if (Number.isFinite(Number(bid.bid_amount))) record.bid_amount = Number(bid.bid_amount);
+      const document_hashes = documentFingerprints(bid.submitted_document_files);
+      if (document_hashes.length) record.document_hashes = document_hashes;
       // A known-collusive label, when the dataset carries one, lets the engine
       // train its GAT instead of falling back to unsupervised anomaly mode.
       // Absent labels are omitted, not defaulted to 0 - "unknown" and "known
