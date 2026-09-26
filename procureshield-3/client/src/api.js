@@ -1,4 +1,5 @@
-const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "") + "/api";
+const API_ORIGIN = (import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://procure-api.onrender.com" : "")).replace(/\/$/, "");
+const BASE = `${API_ORIGIN}/api`;
 
 async function request(path, options = {}) {
   const token = sessionStorage.getItem("ps_token");
@@ -15,11 +16,16 @@ async function request(path, options = {}) {
     sessionStorage.removeItem("ps_token");
     window.dispatchEvent(new Event("ps:unauthorized"));
   }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || `Request failed: ${res.status}`);
+  const raw = await res.text();
+  let body = null;
+  if (raw) {
+    try { body = JSON.parse(raw); } catch { throw new Error(`Server returned invalid JSON (${res.status})`); }
   }
-  return res.json();
+  if (!res.ok) {
+    throw new Error(body?.message || `Request failed: ${res.status}`);
+  }
+  if (body === null) throw new Error(`Server returned an empty response (${res.status})`);
+  return body;
 }
 
 async function requestBlob(path, options = {}) {
