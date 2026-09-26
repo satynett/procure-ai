@@ -28,15 +28,14 @@ export default function CreateTender() {
     if (!files.length) return setError("Upload at least one RFP document first.");
     setAnalyzing(true); setError(""); setMessage("");
     try {
-      const analyzed = [];
-      for (const file of files) {
+      const analyzed = await Promise.all(files.map(async (file) => {
         const content_base64 = await encodeFile(file);
         const result = await api.intelligencePdf({ filename:file.name, content_type:file.type || "application/pdf", content_base64 });
         if (result.extraction_status === "wrong_document") {
           throw new Error(result.message || `Wrong document: ${file.name} does not appear to be a valid procurement RFP.`);
         }
-        analyzed.push({ ...result.requirements, rfp_text: result.text, extraction_status: result.extraction_status, filename: file.name });
-      }
+        return { ...result.requirements, rfp_text: result.text, extraction_status: result.extraction_status, filename: file.name };
+      }));
       const combined = analyzed.reduce((acc, item) => ({
         ...acc,
         eligibility_requirements: [...(acc.eligibility_requirements || []), ...(item.eligibility_requirements || [])],
