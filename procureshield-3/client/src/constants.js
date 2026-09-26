@@ -16,6 +16,7 @@ export const WEIGHT_LABELS = {
   repeatedCoBidding: { label: "Repeated Co-Bidding", weight: 0.9 },
   bidPriceSimilarity: { label: "Bid Price Similarity", weight: 0.8 },
   duplicateBidDocuments: { label: "Identical Bid Documents", weight: 1.2 },
+  duplicateBidDocuments: { label: "Identical Bid Documents", weight: 1.2 },
   coverBidPattern: { label: "Cover Bid Pattern", weight: 0.95 },
   winnerRotation: { label: "Winner Rotation", weight: 1.0 },
   marketConcentration: { label: "Market Concentration", weight: 0.7 },
@@ -35,3 +36,16 @@ export function labelFor(code) {
 
 /** Risk band boundaries, mirroring the engine's RiskBands. */
 export const RISK_BANDS = { low: 25, medium: 50, high: 75 };
+
+
+export function formatDateTime(value) {
+  if (!value) return "—";
+  const text = String(value).trim();
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(text);
+  const d = new Date(dateOnly ? text + "T00:00:00" : text);
+  if (Number.isNaN(d.getTime())) return text;
+  return d.toLocaleString("en-IN", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    ...(dateOnly ? {} : { hour: "2-digit", minute: "2-digit" })
+  });
+}
