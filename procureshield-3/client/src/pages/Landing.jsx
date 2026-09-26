@@ -38,7 +38,7 @@ export default function Landing() {
         <div className="mt-6 flex items-center justify-center gap-3">
           <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
             <button
-              onClick={() => navigate("/bidder")}
+              onClick={() => navigate("/bidder/login")}
               className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
             >
               <div className="flex items-center gap-2 text-emerald-700">
