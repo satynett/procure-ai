@@ -104,6 +104,7 @@ class RiskSignalEngine:
             self._shared_address(company_id, pg, row, pairs_by_company, data_flags),
             self._cobid_frequency(company_id, pg, row, pairs_by_company),
             self._price_similarity(company_id, pg, row, pairs_by_company, data_flags),
+            self._duplicate_bid_documents(company_id, pg, pairs_by_company),
             self._complementary_bidding(company_id, row, data_flags),
             self._winner_rotation(company_id, pg, bundle, row),
             self._market_concentration(company_id, row),
@@ -320,6 +321,41 @@ class RiskSignalEngine:
                     ][:5],
                 },
                 related_entities=related[:5],
+            ),
+        )
+
+    def _duplicate_bid_documents(
+        self,
+        company_id: str,
+        pg: ProcurementGraph,
+        pairs_by_company: Dict[str, List[PairFeature]],
+    ) -> SignalOutcome:
+        weight = self.weights.duplicate_bid_documents
+        matches = [p for p in pairs_by_company.get(company_id, []) if p.shared_document_hashes > 0]
+        if not matches:
+            return SignalOutcome(evaluable=True, weight=weight)
+        related = [p.company_b if p.company_a == company_id else p.company_a for p in matches]
+        total = sum(p.shared_document_hashes for p in matches)
+        return SignalOutcome(
+            evaluable=True,
+            weight=weight,
+            signal=RiskSignal(
+                code="DUPLICATE_BID_DOCUMENTS",
+                label="Identical bid documents submitted by different bidders",
+                severity=1.0,
+                weight=weight,
+                description=(
+                    f"Exactly matching uploaded bid document fingerprint(s) were found "
+                    f"between this bidder and {len(related)} other bidder(s) on the same "
+                    "procurement. This is a document-level review signal; shared "
+                    "templates or authorised common preparation can have legitimate "
+                    "explanations and must be verified."
+                ),
+                evidence={
+                    "matching_document_fingerprints": total,
+                    "peer_companies": [_display(pg, c) for c in related[:8]],
+                },
+                related_entities=related[:8],
             ),
         )
 
@@ -685,6 +721,9 @@ def suspicious_relationship_signals(
             reasons.append(
                 f"average bid gap of only {pair.mean_price_gap:.2%} across shared tenders"
             )
+        if pair.shared_document_hashes > 0:
+            score += 0.45
+            reasons.append(f"exact uploaded document match on {pair.shared_document_hashes} file(s)")
         if pair.alternating_wins >= 3:
             score += 0.2
             reasons.append(f"wins alternate between them {pair.alternating_wins} times")
