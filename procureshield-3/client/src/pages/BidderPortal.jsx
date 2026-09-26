@@ -31,6 +31,7 @@ export default function BidderPortal() {
   const [uploadErrors, setUploadErrors] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const load = async () => {
     setError("");
@@ -59,12 +60,31 @@ export default function BidderPortal() {
 
   async function submitBid() {
     const amount = Number(bidAmount);
-    if (!selected || !company.trim()) return;
+    setError("");
+    setMessage("");
+
+    if (!selected) {
+      setError("Select an open tender before submitting.");
+      return;
+    }
+    if (!company.trim()) {
+      setError("Enter your company name before submitting the bid.");
+      return;
+    }
     if (!Number.isFinite(amount) || amount <= 0) {
       setError("Enter a valid bid amount greater than ₹0.");
       return;
     }
-    setError(""); setMessage("");
+    if (uploadErrors.length) {
+      setError("Remove the rejected files and upload only valid PDF, DOC or DOCX documents.");
+      return;
+    }
+    if (!documents.length) {
+      setError("Upload at least one bid document before submitting.");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const result = await api.submitBid({
         tender_id: selected.tender_id,
@@ -88,7 +108,11 @@ export default function BidderPortal() {
       setUploadErrors([]);
       setBidAmount("");
       setCompany("");
-    } catch (e) { setError(e.message); }
+    } catch (e) {
+      setError(e.message || "Bid submission failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -208,7 +232,7 @@ export default function BidderPortal() {
         </section>
       </main>
 
-      {selected && <TenderModal tender={selected} submitting={showSubmit} company={company} setCompany={setCompany} bidAmount={bidAmount} setBidAmount={setBidAmount} documents={documents} setDocuments={setDocuments} uploadErrors={uploadErrors} setUploadErrors={setUploadErrors} onClose={()=>{setSelected(null);setShowSubmit(false)}} onStartSubmit={()=>setShowSubmit(true)} onSubmit={submitBid}/>}
+      {selected && <TenderModal tender={selected} submitting={showSubmit} company={company} setCompany={setCompany} bidAmount={bidAmount} setBidAmount={setBidAmount} documents={documents} setDocuments={setDocuments} uploadErrors={uploadErrors} setUploadErrors={setUploadErrors} isSubmitting={isSubmitting} onClose={()=>{setSelected(null);setShowSubmit(false)}} onStartSubmit={()=>setShowSubmit(true)} onSubmit={submitBid}/>}
       {showHistory && <BidHistoryModal bids={myBids} onClose={()=>setShowHistory(false)}/>}
       {submissionSummary && <SubmissionSuccessModal summary={submissionSummary} onClose={()=>setSubmissionSummary(null)}/>}
       <footer className="border-t border-slate-200 bg-white px-6 py-5 text-center text-xs text-slate-500">Prototype / sandbox data. The officer and bidder portals read the same tender and bid data.</footer>
@@ -280,7 +304,7 @@ function TenderCard({ tender:t, onOpen, onBid }) {
   );
 }
 
-function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, uploadErrors, setUploadErrors, error, onClose, onStartSubmit, onSubmit }) {
+function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, setBidAmount, documents, setDocuments, uploadErrors, setUploadErrors, isSubmitting, error, onClose, onStartSubmit, onSubmit }) {
   const isAwarded = t.status === "Awarded";
 
   return (
@@ -355,10 +379,12 @@ function TenderModal({ tender:t, submitting, company, setCompany, bidAmount, set
               hint="Drag and drop multiple PDF, DOC or DOCX files, or choose files."
             />
             <button
+              type="button"
               onClick={onSubmit}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white"
+              disabled={isSubmitting}
+              className={"mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white " + (isSubmitting ? "cursor-not-allowed bg-slate-400" : "bg-brand-600 hover:bg-brand-700")}
             >
-              <Upload size={15}/> Submit Bid
+              <Upload size={15}/> {isSubmitting ? "Submitting…" : "Submit Bid"}
             </button>
           </div>
         )}
