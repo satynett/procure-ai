@@ -186,7 +186,7 @@ export async function createBidSubmission({ companyName, bidData }) {
     }
 
     const bidIdResult = await client.query(
-      "SELECT COALESCE(MAX(NULLIF(regexp_replace(bid_id, '\\D', '', 'g'), '')::bigint), 0) AS max_id FROM procure_bids WHERE bid_id LIKE 'DEMO/BID/%'"
+      "SELECT COALESCE(MAX(NULLIF(substring(bid_id from '/([0-9]+)$'), '')::bigint), 0) AS max_id FROM procure_bids WHERE bid_id LIKE 'DEMO/BID/%'"
     );
     const sequence = Number(bidIdResult.rows[0].max_id || 0) + 1;
     const bid = {
