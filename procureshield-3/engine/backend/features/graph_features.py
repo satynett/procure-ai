@@ -82,6 +82,7 @@ class PairFeature:
     cobid_ratio: float
     mean_price_gap: Optional[float]
     alternating_wins: int
+    shared_document_hashes: int
     same_community: bool
 
     def to_dict(self) -> Dict[str, object]:
@@ -96,6 +97,7 @@ class PairFeature:
                 None if self.mean_price_gap is None else round(self.mean_price_gap, 4)
             ),
             "alternating_wins": self.alternating_wins,
+            "shared_document_hashes": self.shared_document_hashes,
             "same_community": self.same_community,
         }
 
@@ -158,9 +160,11 @@ def compute_pair_features(
             continue
 
         gaps: List[float] = []
+        shared_documents: Set[str] = set()
         alternating = 0
         winners: List[str] = []
         for tender in shared_tenders:
+            shared_documents.update(pg.company_tender_documents.get((source, tender), set()) & pg.company_tender_documents.get((target, tender), set()))
             gap = _relative_gap(
                 _bid_amount(pg, source, tender), _bid_amount(pg, target, tender)
             )
@@ -194,6 +198,7 @@ def compute_pair_features(
                 cobid_ratio=len(shared_tenders) / total_tenders,
                 mean_price_gap=(sum(gaps) / len(gaps)) if gaps else None,
                 alternating_wins=alternating,
+                shared_document_hashes=len(shared_documents),
                 same_community=(
                     communities.community_of(source) is not None
                     and communities.community_of(source) == communities.community_of(target)
