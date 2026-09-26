@@ -60,6 +60,20 @@ app.use(requireAuth);
 const VALID_VERIFICATION_STATUSES = ["Verified", "Needs Review", "Rejected"];
 const MAX_COMMENT_LENGTH = 1000;
 
+function hasValidDocumentSignature(filename, contentBase64) {
+  try {
+    const raw = Buffer.from(contentBase64, "base64");
+    if (!raw.length) return false;
+    const ext = filename.toLowerCase().split(".").pop();
+    if (ext === "pdf") return raw.subarray(0, 5).toString("ascii") === "%PDF-";
+    if (ext === "docx") return raw.subarray(0, 2).toString("ascii") === "PK";
+    if (ext === "doc") return raw.subarray(0, 8).toString("hex") === "d0cf11e0a1b11ae1";
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------
 // PostgreSQL-backed data access.
 // The route layer keeps the existing array-shaped API contract so the
@@ -509,7 +523,25 @@ app.post("/api/bidder/bids", asyncRoute(async (req, res) => {
         content_base64: contentBase64
       });
     } catch (err) {
-      if(err instanceof EngineUnavailableError) throw err;
+      if (err instanceof EngineUnavailableError) {
+        // A temporary Render engine outage must not prevent bid submission.
+        // We still reject obviously fake/corrupt payloads by checking the
+        // document's binary signature. The bid remains "Needs Review" so the
+        // officer can validate the document once the engine is back.
+        if (!hasValidDocumentSignature(filename, contentBase64)) {
+          return res.status(400).json({
+            message:`Wrong document: ${filename} is not a valid PDF, DOC or DOCX payload.`,
+            filename,
+            document_error:true
+          });
+        }
+        validatedDocuments.push({
+          name: filename,
+          content_type: doc.content_type || "application/pdf",
+          content_base64: contentBase64
+        });
+        continue;
+      }
       return res.status(400).json({
         message:`Wrong document: ${filename}. The file could not be validated.`,
         filename,
