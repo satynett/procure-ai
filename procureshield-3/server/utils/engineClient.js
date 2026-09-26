@@ -38,11 +38,19 @@ export class EngineUnavailableError extends Error {
 }
 
 async function engineFetch(path, options = {}) {
-  const requestTimeout = path === "/health" ? Math.min(ENGINE_TIMEOUT_MS, 4_000) : path.includes("/intelligence/") ? Math.min(ENGINE_TIMEOUT_MS, 8_000) : ENGINE_TIMEOUT_MS;
-  // Render free services can briefly return 502/503/504 while the Python
-  // service is waking up. Retry those transient gateway failures before
-  // surfacing an engine outage to the bidder/officer UI.
-  const retryDelays = [700];
+  // Intelligence/document extraction can hit a sleeping Render free instance.
+  // Give that service enough time to wake instead of turning a cold start into
+  // a user-visible 502. Health checks remain short; normal analytics stay fast.
+  const requestTimeout = path === "/health"
+    ? Math.min(ENGINE_TIMEOUT_MS, 4_000)
+    : path.includes("/intelligence/")
+      ? Math.max(30_000, Math.min(60_000, ENGINE_TIMEOUT_MS * 4))
+      : ENGINE_TIMEOUT_MS;
+  // Render free services can briefly return 502/503/504 while waking. Back off
+  // progressively; this is especially important for the first RFP after idle.
+  const retryDelays = path.includes("/intelligence/")
+    ? [1_500, 3_000, 6_000, 10_000]
+    : [1_000, 2_000];
   let lastGatewayError = null;
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
@@ -73,7 +81,7 @@ async function engineFetch(path, options = {}) {
     } catch (err) {
       if (err instanceof EngineUnavailableError) throw err;
       const reason = err.name === "AbortError"
-        ? `timed out after ${ENGINE_TIMEOUT_MS}ms`
+        ? `timed out after ${requestTimeout}ms`
         : err.message;
       throw new EngineUnavailableError(
         `Cannot reach the ProcureShield engine at ${ENGINE_URL} (${reason}). ` +
