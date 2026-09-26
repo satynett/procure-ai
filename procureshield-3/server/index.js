@@ -39,7 +39,7 @@ import {
   riskCategory,
   signalLabel,
 } from "./utils/engineMapping.js";
-import { registryEvidenceFor } from "./utils/registrySignals.js";
+import { registryEdges } from "./utils/registrySignals.js";
 import { buildChecklist, buildTenderComparison } from "./utils/checklist.js";
 import { buildClusters } from "./utils/engineMapping.js";
 import { toCsv } from "./utils/csv.js";
@@ -154,10 +154,8 @@ function degradedAnalysis(bidders) {
 
   // Keep the relationship/network pages useful during an engine outage.
   // These are exact registry matches only (phone/bank), not risk scores.
-  const registryEdges = registryEvidenceFor
-    ? registryEdgesForFallback(bidders)
-    : [];
-  const edges = registryEdges.map((e) => ({
+  const registryMatches = registryEdges(bidders);
+  const edges = registryMatches.map((e) => ({
     ...e,
     score: 0,
     linkable: true,
@@ -169,7 +167,7 @@ function degradedAnalysis(bidders) {
     riskMap,
     edges,
     clusters,
-    registryEdges,
+    registryEdges: registryMatches,
     headline: {
       risk_score: null,
       risk_level: "Unavailable",
@@ -185,40 +183,6 @@ function degradedAnalysis(bidders) {
     validation: null,
     disclaimer: "ProcureShield produces statistical risk indicators only. When the analytics engine is unavailable, no risk conclusion is produced.",
   };
-}
-
-function registryEdgesForFallback(bidders) {
-  const byValue = (field) => {
-    const groups = new Map();
-    for (const bidder of bidders) {
-      const value = String(bidder?.[field] || "").trim();
-      if (!value) continue;
-      if (!groups.has(value)) groups.set(value, []);
-      groups.get(value).push(bidder.bidder_id);
-    }
-    return groups;
-  };
-  const edges = new Map();
-  const add = (a, b, evidence, reason) => {
-    const [source, target] = [a, b].sort();
-    const key = `${source}::${target}`;
-    if (!edges.has(key)) edges.set(key, { source, target, evidence: [], reasons: [] });
-    const edge = edges.get(key);
-    if (!edge.evidence.includes(evidence)) edge.evidence.push(evidence);
-    edge.reasons.push(reason);
-  };
-  for (const [field, evidence, reason] of [
-    ["phone", "sharedPhone", "registered against the same contact phone number"],
-    ["bank_account", "sharedBank", "registered against the same bank account number"],
-  ]) {
-    for (const ids of byValue(field).values()) {
-      if (ids.length < 2) continue;
-      for (let i = 0; i < ids.length; i++) {
-        for (let j = i + 1; j < ids.length; j++) add(ids[i], ids[j], evidence, reason);
-      }
-    }
-  }
-  return Array.from(edges.values());
 }
 
 async function getAnalysis(opts = {}) {
