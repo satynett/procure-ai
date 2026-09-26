@@ -5,6 +5,7 @@ import {
   ShieldQuestion, Loader2, ChevronRight, Share2, ClipboardCheck, FileText, Download, ExternalLink,
 } from "lucide-react";
 import { api } from "../api.js";
+import { formatDateTime } from "../constants.js";
 import { RiskBadge, StatusBadge } from "../components/Badges.jsx";
 import Modal from "../components/Modal.jsx";
 import { labelFor } from "../constants.js";
@@ -127,7 +128,7 @@ export default function BidDetail() {
         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-4">
           <Field label="Bidder" value={bidder.company_name} />
           <Field label="Bid Amount" value={`₹ ${bid.bid_amount.toLocaleString("en-IN")}`} />
-          <Field label="Submission Date" value={bid.submission_date} />
+          <Field label="Submission Date" value={formatDateTime(bid.submission_date)} />
           <Field label="MSME Status" value={bidder.msme_status} />
         </div>
       </div>
