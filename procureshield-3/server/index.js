@@ -554,7 +554,13 @@ app.get("/api/bidder/bids", asyncRoute(async (req, res) => {
     "BID-2001"
   );
   const bidders = getBidders();
-  const view = await getAnalysis();
+  let view = { riskMap: {} };
+  try {
+    view = await getAnalysis();
+  } catch (err) {
+    // Bidder history must remain usable even when analytics is temporarily unavailable.
+    console.warn("Bidder history loaded without engine risk scores:", err.message);
+  }
   const tenders = getTenders();
   const bids = getBids()
     .filter((b) => b.bidder_id === bidderId)
