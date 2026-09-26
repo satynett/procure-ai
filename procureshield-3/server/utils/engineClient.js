@@ -23,7 +23,7 @@ import { registryEdges } from "./registrySignals.js";
 // 127.0.0.1 rather than localhost: Node 18+ resolves localhost to ::1 first,
 // and uvicorn binds IPv4 by default, which otherwise fails as "fetch failed".
 const ENGINE_URL = (process.env.ENGINE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-const ENGINE_TIMEOUT_MS = Number(process.env.ENGINE_TIMEOUT_MS || 60_000);
+const ENGINE_TIMEOUT_MS = Number(process.env.ENGINE_TIMEOUT_MS || 15_000);
 const ENGINE_TRAIN = String(process.env.ENGINE_TRAIN || "false").toLowerCase() === "true";
 // Render's lightweight Python service may not have PyTorch/PyG available.
 // Keep production analysis deterministic unless model support is explicitly enabled.
@@ -38,15 +38,16 @@ export class EngineUnavailableError extends Error {
 }
 
 async function engineFetch(path, options = {}) {
+  const requestTimeout = path === "/health" ? Math.min(ENGINE_TIMEOUT_MS, 4_000) : path.includes("/intelligence/") ? Math.min(ENGINE_TIMEOUT_MS, 8_000) : ENGINE_TIMEOUT_MS;
   // Render free services can briefly return 502/503/504 while the Python
   // service is waking up. Retry those transient gateway failures before
   // surfacing an engine outage to the bidder/officer UI.
-  const retryDelays = [750, 1500];
+  const retryDelays = [700];
   let lastGatewayError = null;
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ENGINE_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), requestTimeout);
     try {
       const res = await fetch(`${ENGINE_URL}${path}`, {
         headers: { "Content-Type": "application/json" },
@@ -91,6 +92,7 @@ async function engineFetch(path, options = {}) {
 // Cache
 // ---------------------------------------------------------------------
 let cache = null; // { fingerprint, analysis, view, at, records }
+let analysisPromise = null;
 
 function fingerprint(records) {
   return crypto.createHash("sha1").update(JSON.stringify(records)).digest("hex");
@@ -173,20 +175,30 @@ export async function analyze(bidders, bids, opts = {}) {
 
   if (!opts.force && cache && cache.fingerprint === fp) return cache.view;
 
-  const analysis = await engineFetch("/analyze", {
-    method: "POST",
-    body: JSON.stringify({
-      records,
-      train: opts.train ?? ENGINE_TRAIN,
-      use_model: opts.useModel ?? ENGINE_USE_MODEL,
-      max_entities: 500,
-      include_all_entities: true,
-    }),
-  });
+  if (analysisPromise) return analysisPromise;
 
-  const view = buildView(analysis, bidders);
-  cache = { fingerprint: fp, analysis, view, at: new Date().toISOString(), records };
-  return view;
+  analysisPromise = (async () => {
+    const analysis = await engineFetch("/analyze", {
+      method: "POST",
+      body: JSON.stringify({
+        records,
+        train: opts.train ?? ENGINE_TRAIN,
+        use_model: opts.useModel ?? ENGINE_USE_MODEL,
+        max_entities: 500,
+        include_all_entities: true,
+      }),
+    });
+
+    const view = buildView(analysis, bidders);
+    cache = { fingerprint: fp, analysis, view, at: new Date().toISOString(), records };
+    return view;
+  })();
+
+  try {
+    return await analysisPromise;
+  } finally {
+    analysisPromise = null;
+  }
 }
 
 /**
