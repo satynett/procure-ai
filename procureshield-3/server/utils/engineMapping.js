@@ -16,6 +16,7 @@ export const SIGNAL_META = {
   SHARED_ADDRESS: { ui: "sharedAddress", label: "Shared Address" },
   REPEATED_CO_BIDDING: { ui: "repeatedCoBidding", label: "Repeated Co-Bidding" },
   BID_PRICE_SIMILARITY: { ui: "bidPriceSimilarity", label: "Bid Price Similarity" },
+  DUPLICATE_BID_DOCUMENTS: { ui: "duplicateBidDocuments", label: "Identical Bid Documents" },
   COVER_BID_PATTERN: { ui: "coverBidPattern", label: "Cover Bid Pattern" },
   WINNER_ROTATION: { ui: "winnerRotation", label: "Winner Rotation" },
   MARKET_CONCENTRATION: { ui: "marketConcentration", label: "Market Concentration" },
@@ -203,7 +204,8 @@ export function buildEdges(relationships, entityToRaw, registryEdges = []) {
       if (rel.shared_addresses > 0) evidence.push("sharedAddress");
       if (rel.shared_tenders > 0) evidence.push("repeatedCoBidding");
       if (rel.alternating_wins > 0) evidence.push("winnerRotation");
-      const strong = STRONG_PAIR_KEYS.some((k) => Number(rel[k]) > 0);
+      if (rel.shared_document_hashes > 0) evidence.push("duplicateBidDocuments");
+      const strong = STRONG_PAIR_KEYS.some((k) => Number(rel[k]) > 0) || Number(rel.shared_document_hashes) > 0;
       return {
         source,
         target,
