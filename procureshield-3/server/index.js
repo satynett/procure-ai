@@ -140,8 +140,48 @@ function maskBidder(b) {
 // outage into a clean 503 naming the engine URL, so an officer sees "the
 // engine is not running" instead of a screen full of zeros.
 // ---------------------------------------------------------------------
+function degradedAnalysis(bidders) {
+  return {
+    riskMap: Object.fromEntries(bidders.map((b) => [b.bidder_id, {
+      entity_id: b.bidder_id,
+      score: 0,
+      category: "Low",
+      cluster_id: null,
+      signals: [],
+      explanation: "Analytics engine temporarily unavailable. No risk conclusion is being produced.",
+      recommended_actions: [],
+    }])),
+    edges: [],
+    clusters: [],
+    registryEdges: [],
+    headline: {
+      risk_score: null,
+      risk_level: "Unavailable",
+      mode: "engine-unavailable",
+      model_probability: null,
+      explanation: "The analytics engine is temporarily unavailable. Review data is still accessible.",
+      analysis_id: null,
+    },
+    graph: { nodes: [], edges: [], stats: {} },
+    flagged: 0,
+    signalRollup: [],
+    training: null,
+    validation: null,
+    disclaimer: "ProcureShield produces statistical risk indicators only. When the analytics engine is unavailable, no risk conclusion is produced.",
+  };
+}
+
 async function getAnalysis(opts = {}) {
-  return analyze(getBidders(), getBids(), opts);
+  const bidders = getBidders();
+  try {
+    return await analyze(bidders, getBids(), opts);
+  } catch (err) {
+    if (err instanceof EngineUnavailableError) {
+      console.warn("Analytics engine unavailable; serving degraded officer data:", err.message);
+      return degradedAnalysis(bidders);
+    }
+    throw err;
+  }
 }
 
 function asyncRoute(handler) {
