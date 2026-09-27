@@ -1412,4 +1412,13 @@ if (process.env.NODE_ENV !== "test") {
   // Match Render's edge keep-alive window to avoid intermittent 502 resets.
   server.keepAliveTimeout = 120_000;
   server.headersTimeout = 120_000;
+
+  // Warm the analytics cache in the background so the first officer page does
+  // not pay the full Render-engine cold-start latency. This never blocks login
+  // or server startup, and failures are harmless because normal requests retry.
+  setImmediate(() => {
+    getAnalysis().catch((err) => {
+      console.warn("Background analytics warm-up skipped:", err.message);
+    });
+  });
 }
