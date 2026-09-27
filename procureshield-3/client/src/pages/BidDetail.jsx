@@ -30,11 +30,16 @@ export default function BidDetail() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.bidDetail(bidId).then((res) => {
-      setData(res);
-      setLoading(false);
-      setAiSummary(null);
-    });
+    api.bidDetail(bidId)
+      .then((res) => {
+        setData(res);
+        setAiSummary(null);
+      })
+      .catch((err) => {
+        console.error("Unable to load bid detail:", err);
+        setToast(err.message || "Unable to load this bid.");
+      })
+      .finally(() => setLoading(false));
   }, [bidId]);
 
   useEffect(() => {
@@ -274,7 +279,11 @@ export default function BidDetail() {
               <h2 className="text-sm font-semibold text-slate-800">AI Verification Assistant</h2>
             </div>
 
-            {relatedEdges.length === 0 ? (
+            {data.analysisPending ? (
+              <p className="text-sm text-slate-600">
+                Bid details are loaded. Risk analysis is temporarily unavailable and will be available when the analytics service is online.
+              </p>
+            ) : relatedEdges.length === 0 ? (
               <p className="text-sm text-slate-600">
                 Automated analysis completed. No relationship signals were found for this bidder in the current dataset.
               </p>
