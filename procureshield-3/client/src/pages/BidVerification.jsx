@@ -35,10 +35,13 @@ export default function BidVerification() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.bids({ q, status, risk, category }).then((res) => {
-      setBids(res.bids);
-      setLoading(false);
-    });
+    api.bids({ q, status, risk, category })
+      .then((res) => setBids(res.bids))
+      .catch((err) => {
+        console.error("Unable to load bids:", err);
+        setBids([]);
+      })
+      .finally(() => setLoading(false));
   }, [q, status, risk, category]);
 
   async function handleExportCsv() {
@@ -52,8 +55,9 @@ export default function BidVerification() {
   }
 
   useEffect(() => {
-    load();
-  }, [load]);
+    const timer = window.setTimeout(load, q ? 350 : 0);
+    return () => window.clearTimeout(timer);
+  }, [load, q]);
 
   useEffect(() => {
     const urlQ = params.get("q");
