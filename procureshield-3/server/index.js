@@ -755,6 +755,86 @@ app.get("/api/bids/:id/files/:index", asyncRoute(async (req, res) => {
   res.send(buffer);
 }));
 
+app.get("/api/bid-detail", asyncRoute(async (req, res) => {
+  // Query-string lookup avoids encoded-slash ambiguity in GeM bid IDs such as
+  // GEM/2026/B/000001. Keep the legacy /api/bids/:id route below for compatibility.
+  const bidders = getBidders();
+  const bidId = String(req.query.bid_id || "");
+  const bid = getBids().find((b) => b.bid_id === bidId);
+  if (!bid) return res.status(404).json({ message: "Bid not found" });
+
+  const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
+  const view = await getAnalysis();
+  const risk = view.riskMap[bid.bidder_id] || {
+    score: 0,
+    category: "Low",
+    signals: [],
+    explanation: "",
+    recommended_actions: [],
+  };
+
+  const bidderEdges = view.edges.filter(
+    (e) => e.source === bidder.bidder_id || e.target === bidder.bidder_id
+  );
+  const evidenceForBidder = Array.from(
+    new Set([
+      ...bidderEdges.flatMap((e) => e.evidence),
+      ...risk.signals.map((s) => s.ui_code),
+      ...registryEvidenceFor(bidder.bidder_id, view.registryEdges),
+    ])
+  );
+
+  const publishedTender = getTenders().find((t) => t.tender_id === bid.tender_id) || null;
+  let tender = publishedTender;
+  if (!tender) {
+    try {
+      tender = await tenderDetail(bid.tender_id);
+    } catch (err) {
+      console.warn("Tender lookup failed for " + bid.tender_id + ": " + err.message);
+      tender = null;
+    }
+  }
+
+  const finalComparison = buildTenderComparison({
+    tender: publishedTender || tender,
+    bidder,
+    bid,
+  });
+
+  res.json({
+    bid: {
+      ...decorateBid(bid, bidders, view),
+      submitted_document_files: Array.isArray(bid.submitted_document_files) ? bid.submitted_document_files : [],
+    },
+    bidder: maskBidder(bidder),
+    checklist: buildChecklist({ bidder, bid, evidenceForBidder }),
+    riskAssessment: {
+      score: risk.score,
+      category: risk.category,
+      explanation: risk.explanation,
+      recommended_actions: risk.recommended_actions,
+      model_probability: risk.model_probability ?? null,
+      signals: risk.signals,
+      requires_human_investigation: true,
+    },
+    tender,
+    finalComparison,
+    relatedEdges: bidderEdges.map((e) => {
+      const otherId = e.source === bidder.bidder_id ? e.target : e.source;
+      const other = bidders.find((x) => x.bidder_id === otherId);
+      return {
+        bidder_id: otherId,
+        company_name: other ? other.company_name : otherId,
+        score: e.score,
+        evidence: e.evidence,
+        reasons: e.reasons,
+        linkable: e.linkable,
+      };
+    }),
+    disclaimer: view.disclaimer,
+  });
+}));
+
 app.get("/api/bids/:id", asyncRoute(async (req, res) => {
   const bidders = getBidders();
   const bidId = decodeURIComponent(req.params.id);
