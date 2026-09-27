@@ -764,7 +764,24 @@ app.get("/api/bid-detail", asyncRoute(async (req, res) => {
   if (!bid) return res.status(404).json({ message: "Bid not found" });
 
   const bidder = bidders.find((b) => b.bidder_id === bid.bidder_id);
-  const view = await getAnalysis();
+
+  // Bid details must never be held hostage by the analytics engine. The engine
+  // is an enrichment layer and can be cold/sleeping on Render. Return the bid,
+  // documents and compliance data immediately, while allowing risk data to be
+  // included when the current analysis is already available.
+  let view;
+  let analysisPending = false;
+  try {
+    view = await Promise.race([
+      getAnalysis(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("analysis-timeout")), 2000)),
+    ]);
+  } catch (err) {
+    analysisPending = true;
+    console.warn("Bid detail continuing without live risk analysis:", err.message);
+    view = { riskMap: {}, edges: [], registryEdges: [], disclaimer: "Risk analysis is temporarily unavailable. The bid record remains available for officer review." };
+  }
+
   const risk = view.riskMap[bid.bidder_id] || {
     score: 0,
     category: "Low",
@@ -912,6 +929,7 @@ app.get("/api/bids/:id", asyncRoute(async (req, res) => {
       };
     }),
     disclaimer: view.disclaimer,
+    analysisPending,
   });
 }));
 
