@@ -10,7 +10,10 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Optional
 
-from ..analysis.pipeline import ProcureShieldPipeline
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..analysis.pipeline import ProcureShieldPipeline
 from ..config import Settings, load_settings
 from ..logging_utils import configure_logging
 
@@ -24,15 +27,21 @@ def get_settings() -> Settings:
     return settings
 
 
-def get_pipeline() -> ProcureShieldPipeline:
-    """FastAPI dependency returning the shared pipeline instance."""
+def get_pipeline() -> "ProcureShieldPipeline":
+    """FastAPI dependency returning the shared pipeline instance.
+
+    Import the heavy analytics pipeline lazily so the lightweight /health
+    endpoint can boot even if an optional analytics dependency is unavailable.
+    """
+    from ..analysis.pipeline import ProcureShieldPipeline
+
     global _PIPELINE
     if _PIPELINE is None:
         _PIPELINE = ProcureShieldPipeline(get_settings())
     return _PIPELINE
 
 
-def reset_pipeline(settings: Optional[Settings] = None) -> ProcureShieldPipeline:
+def reset_pipeline(settings: Optional[Settings] = None) -> "ProcureShieldPipeline":
     """Replace the singleton - used by tests and by CLI entry points."""
     global _PIPELINE
     _PIPELINE = ProcureShieldPipeline(settings or get_settings())
