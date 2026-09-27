@@ -42,15 +42,17 @@ async function engineFetch(path, options = {}) {
   // Give that service enough time to wake instead of turning a cold start into
   // a user-visible 502. Health checks remain short; normal analytics stay fast.
   const requestTimeout = path === "/health"
-    ? Math.min(ENGINE_TIMEOUT_MS, 4_000)
+    ? Math.max(10_000, Math.min(20_000, ENGINE_TIMEOUT_MS))
     : path.includes("/intelligence/")
       ? Math.max(30_000, Math.min(60_000, ENGINE_TIMEOUT_MS * 4))
       : ENGINE_TIMEOUT_MS;
   // Render free services can briefly return 502/503/504 while waking. Back off
   // progressively; this is especially important for the first RFP after idle.
-  const retryDelays = path.includes("/intelligence/")
-    ? [1_500, 3_000, 6_000, 10_000]
-    : [1_000, 2_000];
+  const retryDelays = path === "/health"
+    ? [5_000, 10_000, 20_000]
+    : path.includes("/intelligence/")
+      ? [1_500, 3_000, 6_000, 10_000]
+      : [1_000, 2_000];
   let lastGatewayError = null;
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
