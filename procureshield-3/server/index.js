@@ -39,7 +39,7 @@ import {
   riskCategory,
   signalLabel,
 } from "./utils/engineMapping.js";
-import { registryEdges } from "./utils/registrySignals.js";
+import { registryEdges, registryEvidenceFor } from "./utils/registrySignals.js";
 import { buildChecklist, buildTenderComparison } from "./utils/checklist.js";
 import { buildClusters } from "./utils/engineMapping.js";
 import { toCsv } from "./utils/csv.js";
