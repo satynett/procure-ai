@@ -62,7 +62,7 @@ export const api = {
     return requestBlob(`/bids/export.csv?${qs.toString()}`);
   },
   reportCsv: (type) => requestBlob(`/reports/${type}/csv`),
-  bidDetail: (bidId) => request(`/bids/${encodeURIComponent(bidId)}`),
+  bidDetail: (bidId) => request(`/bid-detail?bid_id=${encodeURIComponent(bidId)}`),
   bidders: () => request("/bidders"),
   bidderDetail: (bidderId) => request(`/bidders/${encodeURIComponent(bidderId)}`),
   bidFile: (bidId, index = 0) => requestBlob(`/bids/${encodeURIComponent(bidId)}/files/${index}`),
