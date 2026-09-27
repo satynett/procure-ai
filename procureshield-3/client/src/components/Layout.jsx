@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { useApp } from "../store.jsx";
 import { Building2 } from "lucide-react";
-import { api } from "../api.js";
 
 const NAV = [
   { to: "/app/officer", label: "Officer Command Center", icon: Building2 },
@@ -35,7 +34,6 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
-  const [alertCount, setAlertCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       return localStorage.getItem("procureshield-sidebar") !== "collapsed";
@@ -52,58 +50,7 @@ export default function Layout({ children }) {
     }
   }, [sidebarOpen]);
 
-  useEffect(() => {
-    let active = true;
-    api.alerts()
-      .then((res) => {
-        if (active) setAlertCount(Array.isArray(res.alerts) ? res.alerts.length : 0);
-      })
-      .catch(() => {
-        if (active) setAlertCount(0);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  function handleSearch(e) {
-    e.preventDefault();
-    if (!query.trim()) return;
-    navigate(`/app/bid-verification?q=${encodeURIComponent(query.trim())}`);
-  }
-
-  return (
-    <div className="flex h-screen bg-slate-100">
-      {/* ChatGPT-style collapsible officer sidebar */}
-      <aside
-        className={`hidden flex-shrink-0 flex-col border-r border-slate-200 bg-slate-800 text-slate-200 transition-[width] duration-200 md:flex ${
-          sidebarOpen ? "w-64" : "w-[72px]"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setSidebarOpen((v) => !v)}
-          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          className={`group flex h-[72px] w-full flex-shrink-0 items-center border-b border-white/10 text-left transition hover:bg-white/5 ${
-            sidebarOpen ? "gap-2 px-4" : "justify-center px-2"
-          }`}
-        >
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-700 shadow-sm">
-            <ShieldCheck size={20} className="text-white" />
-          </div>
-
-          {sidebarOpen && (
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-bold leading-tight text-white">ProcureShield AI</div>
-              <div className="truncate text-[11px] leading-tight text-slate-400">GeM Verification System</div>
-            </div>
-          )}
-
-          {sidebarOpen && (
-            <PanelLeftClose
-              size={17}
-              className="flex-shrink-0 text-slate-400 transition group-hover:text-white"
+sition group-hover:text-white"
             />
           )}
         </button>
@@ -172,16 +119,11 @@ export default function Layout({ children }) {
             <button
               type="button"
               onClick={() => navigate("/app/alerts")}
-              aria-label={alertCount ? `Open alerts, ${alertCount} available` : "Open alerts"}
+              aria-label="Open alerts"
               title="Alerts"
-              className="relative rounded-full p-2 text-slate-300 hover:bg-white/10"
+              className="rounded-full p-2 text-slate-300 hover:bg-white/10"
             >
               <Bell size={18} />
-              {alertCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-4 text-white">
-                  {alertCount > 9 ? "9+" : alertCount}
-                </span>
-              )}
             </button>
             <div className="relative">
               <button
