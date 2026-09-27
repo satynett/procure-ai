@@ -1,9 +1,35 @@
 const API_ORIGIN = (import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://procure-api.onrender.com" : "")).replace(/\/$/, "");
 const BASE = `${API_ORIGIN}/api`;
 
+// Short-lived GET cache + in-flight request deduplication.
+// Officer pages repeatedly revisit the same analytics-backed endpoints;
+// keeping them for 20s makes sidebar navigation instant after first load
+// without turning the demo data into a long-lived stale cache.
+const GET_CACHE_TTL_MS = 20_000;
+const getCache = new Map();
+const getInFlight = new Map();
+
+function invalidateGetCache() {
+  getCache.clear();
+}
+
 async function request(path, options = {}) {
-  const token = sessionStorage.getItem("ps_token");
-  const res = await fetch(`${BASE}${path}`, {
+  const method = String(options.method || "GET").toUpperCase();
+  const isGet = method === "GET";
+  const now = Date.now();
+
+  if (isGet) {
+    const cached = getCache.get(path);
+    if (cached && now - cached.at < GET_CACHE_TTL_MS) {
+      return cached.body;
+    }
+    const pending = getInFlight.get(path);
+    if (pending) return pending;
+  }
+
+  const run = (async () => {
+    const token = sessionStorage.getItem("ps_token");
+    const res = await fetch(`${BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -24,8 +50,22 @@ async function request(path, options = {}) {
   if (!res.ok) {
     throw new Error(body?.message || `Request failed: ${res.status}`);
   }
-  if (body === null) throw new Error(`Server returned an empty response (${res.status})`);
-  return body;
+    if (body === null) throw new Error(`Server returned an empty response (${res.status})`);
+    if (isGet) getCache.set(path, { at: Date.now(), body });
+    return body;
+  })();
+
+  if (isGet) {
+    getInFlight.set(path, run);
+    try {
+      return await run;
+    } finally {
+      getInFlight.delete(path);
+    }
+  }
+
+  invalidateGetCache();
+  return run;
 }
 
 async function requestBlob(path, options = {}) {
