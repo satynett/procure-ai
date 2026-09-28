@@ -20,7 +20,6 @@ from ..exceptions import (
     ProcureShieldError,
 )
 from ..logging_utils import configure_logging, get_logger
-from ..models.registry import ModelRegistry
 from ..intelligence import check_eligibility, decode_upload, extract_pdf, extract_requirements, validate_document
 from .dependencies import get_pipeline, get_settings
 from .schemas import (
