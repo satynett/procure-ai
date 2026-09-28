@@ -1389,6 +1389,8 @@ app.get("/api/reports/:type/csv", asyncRoute(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------------
+app.get("/api/ping", (req, res) => res.json({ status: "ok" }));
+
 app.get("/api/health", asyncRoute(async (req, res) => {
   const engine = await engineStatus();
   res.json({ status: "ok", demo: true, engine });
