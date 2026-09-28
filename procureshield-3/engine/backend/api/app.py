@@ -127,36 +127,29 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     # -------------------------------------------------------------- routes
     @app.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> Dict[str, Any]:
-        """Cheap liveness endpoint that does not initialise the analytics pipeline.
+        """Ultra-light liveness endpoint for Render.
 
-        Render uses this endpoint as a readiness probe, so it must remain fast and
-        independent of graph/model state.
+        Do not touch the analytics pipeline, model registry, PyTorch, PyG, or
+        graph backend here. Render calls /health during deploys and wake-ups;
+        any optional analytics dependency must never be able to make liveness
+        fail. Detailed engine state is available from the analytics endpoints.
         """
-        settings = getattr(app.state, "settings", None)
-        if settings is None:
-            settings = load_settings()
-
-        try:
-            registry_has_artifacts = ModelRegistry(settings.model.artifact_dir).exists()
-        except Exception:
-            registry_has_artifacts = False
-
-        from ..models.gat import describe_backend
-
         return {
             "status": "ok",
             "version": __import__("backend").__version__,
-            "graph_backend": settings.graph_backend,
+            "graph_backend": os.getenv("PROCURESHIELD_GRAPH_BACKEND", "memory"),
             "model": {
-                **describe_backend(),
+                "torch_available": False,
+                "pyg_available": False,
+                "gat_backend": "not_checked",
                 "trained": False,
-                "registry_has_artifacts": registry_has_artifacts,
+                "registry_has_artifacts": False,
             },
             "last_analysis": None,
             "thresholds": {
-                "alert_threshold": settings.alert_threshold,
-                "rule_weight": settings.rule_weight,
-                "model_weight": settings.model_weight,
+                "alert_threshold": float(os.getenv("PROCURESHIELD_ALERT_THRESHOLD", "50.0")),
+                "rule_weight": float(os.getenv("PROCURESHIELD_RULE_WEIGHT", "0.6")),
+                "model_weight": float(os.getenv("PROCURESHIELD_MODEL_WEIGHT", "0.4")),
             },
             "disclaimer": DISCLAIMER,
         }
