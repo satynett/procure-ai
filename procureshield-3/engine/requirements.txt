@@ -1,28 +1,15 @@
-# ProcureShield Engine - runtime + test dependencies (Python 3.11+)
-# Versions are lower-bounded so the stack installs on a clean 3.11 image;
-# pin exactly (==) if you need byte-identical reproducibility.
+# ProcureShield Engine - runtime dependencies
+# Pinned to avoid Render/Python 3.14 resolver backtracking.
 
-# --- core numerics / data -------------------------------------------------
-numpy>=1.26
+numpy==2.5.3
 pandas==3.0.6
 python-dateutil==2.9.0.post0
-scikit-learn>=1.3
-joblib>=1.3
-
-# --- graph ----------------------------------------------------------------
-networkx>=3.2
-
-# Deep-learning packages are intentionally kept out of the minimal runtime.
-# Install requirements-full.txt when supervised GAT training is needed.
-
-# --- API ------------------------------------------------------------------
-fastapi>=0.110
-uvicorn[standard]>=0.27
-pydantic>=2.6
-
-# --- tests ----------------------------------------------------------------
-pytest>=8.0
-httpx>=0.27
-
-# --- document intelligence ------------------------------------------------
-PyMuPDF>=1.24
+scikit-learn==1.9.1
+joblib==1.6.0
+networkx==3.7
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+httpx==0.28.1
+PyMuPDF==1.28.2
+pytest==9.1.1
