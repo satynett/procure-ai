@@ -16,19 +16,20 @@ function invalidateGetCache() {
 async function request(path, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const isGet = method === "GET";
+  const token = sessionStorage.getItem("ps_token") || "";
+  const cacheKey = isGet ? token + "::" + path : path;
   const now = Date.now();
 
   if (isGet) {
-    const cached = getCache.get(path);
+    const cached = getCache.get(cacheKey);
     if (cached && now - cached.at < GET_CACHE_TTL_MS) {
       return cached.body;
     }
-    const pending = getInFlight.get(path);
+    const pending = getInFlight.get(cacheKey);
     if (pending) return pending;
   }
 
   const run = (async () => {
-    const token = sessionStorage.getItem("ps_token");
     const res = await fetch(`${BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -51,16 +52,16 @@ async function request(path, options = {}) {
     throw new Error(body?.message || `Request failed: ${res.status}`);
   }
     if (body === null) throw new Error(`Server returned an empty response (${res.status})`);
-    if (isGet) getCache.set(path, { at: Date.now(), body });
+    if (isGet) getCache.set(cacheKey, { at: Date.now(), body });
     return body;
   })();
 
   if (isGet) {
-    getInFlight.set(path, run);
+    getInFlight.set(cacheKey, run);
     try {
       return await run;
     } finally {
-      getInFlight.delete(path);
+      getInFlight.delete(cacheKey);
     }
   }
 
