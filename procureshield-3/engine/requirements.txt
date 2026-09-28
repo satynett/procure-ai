@@ -1,9 +1,10 @@
 # ProcureShield Engine - runtime dependencies
 # Pinned to avoid Render/Python 3.14 resolver backtracking.
+# python-dateutil is resolved transitively by pandas; do not pin it separately
+# so a transient PyPI metadata timeout cannot be turned into a hard requirement.
 
 numpy==2.5.3
 pandas==3.0.6
-python-dateutil==2.9.0.post0
 scikit-learn==1.9.1
 joblib==1.6.0
 networkx==3.7
