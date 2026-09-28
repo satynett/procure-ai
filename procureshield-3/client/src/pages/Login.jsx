@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Loader2, Mail, LockKeyhole, Building2, BriefcaseBusiness } from "lucide-react";
 import { useApp } from "../store.jsx";
@@ -9,6 +9,7 @@ const CONFIG={officer:{title:"Officer Login",subtitle:"Access tender management,
 export default function Login({role="officer"}){
  const c=CONFIG[role]||CONFIG.officer,RoleIcon=c.icon;
  const [username,setUsername]=useState(c.username),[password,setPassword]=useState(c.password),[error,setError]=useState(""),[loading,setLoading]=useState(false);
+ useEffect(() => { api.warmup(); }, []);
  const {login}=useApp();const navigate=useNavigate();
  async function handleSubmit(e){e.preventDefault();setError("");setLoading(true);try{const res=await api.login(username,password);if(role==="officer"&&res.officer?.role!=="Procurement Officer")throw new Error("Please use an officer account for the Officer Portal.");if(role==="bidder"&&res.officer?.role!=="Bidder")throw new Error("Please use a bidder account for the Bidder Portal.");login(res.officer,res.token);navigate(c.destination);}catch(err){setError(err.message||"Login failed");}finally{setLoading(false);}}
  async function instantLogin(targetRole){const target=CONFIG[targetRole];setError("");setLoading(true);try{const res=await api.login(target.username,target.password);login(res.officer,res.token);navigate(target.destination);}catch(err){setError(err.message||"Demo login failed");}finally{setLoading(false);}}
