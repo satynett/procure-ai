@@ -68,8 +68,11 @@ export default function CreateTender() {
         rfp_documents,
       });
       setParsed(result.tender);
-      setMessage(publish ? "Tender published. It is now visible in the bidder portal." : "Draft saved. You can publish it from Tender Management.");
-      if (publish) setTimeout(() => navigate("/app/officer"), 900);
+      setMessage(
+        publish
+          ? "Tender published successfully. The generated checklist is shown below and the tender is now visible in the bidder portal."
+          : "Draft saved. You can publish it from Tender Management."
+      );
     } catch (e) {
       setError(e.message || "Could not create tender.");
     } finally { setBusy(false); }
