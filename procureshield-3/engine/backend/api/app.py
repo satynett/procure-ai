@@ -129,10 +129,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def health() -> Dict[str, Any]:
         """Ultra-light liveness endpoint for Render.
 
-        Do not touch the analytics pipeline, model registry, PyTorch, PyG, or
-        graph backend here. Render calls /health during deploys and wake-ups;
-        any optional analytics dependency must never be able to make liveness
-        fail. Detailed engine state is available from the analytics endpoints.
+        Never initialize the analytics pipeline, model registry, PyTorch/PyG,
+        graph backend, or model artifacts from the Render health probe.
         """
         return {
             "status": "ok",
