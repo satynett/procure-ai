@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Loader2, UploadCloud } from "lucide-react";
 import DocumentDropzone from "../components/DocumentDropzone.jsx";
@@ -23,6 +23,12 @@ export default function CreateTender() {
   const [analyzing, setAnalyzing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  // Wake the analytics service while the officer is filling the form, so the
+  // first RFP analysis is not also paying the Render cold-start delay.
+  useEffect(() => {
+    api.engineStatus().catch(() => null);
+  }, []);
 
   async function analyzeRfp() {
     if (!files.length) return setError("Upload at least one RFP document first.");
