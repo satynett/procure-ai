@@ -82,6 +82,8 @@ async function requestBlob(path, options = {}) {
   return res.blob();
 }
 
+export function warmup() { return fetch(`${BASE}/ping`, { method: "GET", cache: "no-store" }).catch(() => null); }
+
 export const api = {
   login: (username, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }),
