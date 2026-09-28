@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from ..config import DISCLAIMER, Settings
-from ..data.synthetic import SyntheticConfig, generate_synthetic_dataset
 from ..exceptions import (
     DataValidationError,
     DependencyMissingError,
@@ -20,7 +19,6 @@ from ..exceptions import (
     ProcureShieldError,
 )
 from ..logging_utils import configure_logging, get_logger
-from ..intelligence import check_eligibility, decode_upload, extract_pdf, extract_requirements, validate_document
 from .dependencies import get_pipeline, get_settings
 from .schemas import (
     AnalyzeRequest,
@@ -252,6 +250,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def intelligence_pdf(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         """Extract text from an uploaded PDF supplied as base64."""
         try:
+            from ..intelligence import decode_upload, extract_pdf, extract_requirements
             data = decode_upload(payload)
             result = extract_pdf(data, str(payload.get("filename", "document.pdf")))
             result["requirements"] = extract_requirements(result.get("text", ""))
@@ -266,6 +265,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @app.post("/intelligence/validate-document", tags=["document-intelligence"])
     def intelligence_validate(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         try:
+            from ..intelligence import decode_upload, validate_document
             data = decode_upload(payload)
             return validate_document(str(payload.get("filename", "document.pdf")), payload.get("content_type"), data)
         except ValueError as exc:
@@ -275,6 +275,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def intelligence_eligibility(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         tender = payload.get("tender") or {}
         bidder = payload.get("bidder") or {}
+        from ..intelligence import check_eligibility
         return check_eligibility(tender, bidder)
 
     @app.get("/demo/dataset", tags=["system"])
@@ -283,6 +284,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         seed: int = Query(7, ge=0),
     ) -> Dict[str, Any]:
         """Preview the built-in synthetic dataset (useful for smoke tests)."""
+        from ..data.synthetic import SyntheticConfig, generate_synthetic_dataset
         frame = generate_synthetic_dataset(SyntheticConfig(seed=seed))
         return {
             "total_rows": int(len(frame)),
@@ -297,6 +299,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 def _source_kwargs(request: Any) -> Dict[str, Any]:
     """Translate a :class:`DataSource` into pipeline keyword arguments."""
     if getattr(request, "use_synthetic", False):
+        from ..data.synthetic import SyntheticConfig, generate_synthetic_dataset
         return {
             "frame": generate_synthetic_dataset(
                 SyntheticConfig(seed=getattr(request, "synthetic_seed", 7))
