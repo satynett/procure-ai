@@ -260,6 +260,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     @app.post("/intelligence/requirements", tags=["document-intelligence"])
     def intelligence_requirements(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        from ..intelligence import extract_requirements
         return extract_requirements(str(payload.get("text", "")))
 
     @app.post("/intelligence/validate-document", tags=["document-intelligence"])
