@@ -11,23 +11,9 @@ export default function OfficerPortal() {
   const [loading,setLoading]=useState(true);
 
   const load=()=>api.tenders().then(r=>setTenders(r.tenders||[])).catch(e=>setError(e.message||"Could not load tenders.")).finally(()=>setLoading(false));
-  useEffect(()=>{
+  useEffect(() => {
     load();
-
-    // The command centre is the default landing page. Warm the analytics-backed
-    // sections quietly after the tender list is available so the next sidebar
-    // click does not pay the Render/engine cold-start cost.
-    const timer = window.setTimeout(() => {
-      Promise.allSettled([
-        api.dashboard(),
-        api.bids({ page: 1, pageSize: 50 }),
-        api.network(),
-        api.alerts(),
-      ]);
-    }, 700);
-
-    return () => window.clearTimeout(timer);
-  },[]);
+  }, []);
 
   const open=tenders.filter(t=>t.status==="Open");
   const drafts=tenders.filter(t=>t.status==="Draft");
